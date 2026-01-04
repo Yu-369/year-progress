@@ -1,0 +1,74 @@
+
+name: Year Progress App Build
+
+on:
+  push:
+    branches: ["main"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      # 1. Setup Environment
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 2. Build Web Application
+      - name: Install Dependencies
+        run: |
+          npm ci
+          npm install @capacitor/cli @capacitor/core @capacitor/android
+
+      - name: Build Web App
+        run: npm run build
+
+      # 3. Generate & Build Android APK
+      - name: Initialize Android Project
+        run: |
+          # Use || true to prevent failure if directory exists
+          npx cap add android || true
+          npx cap sync
+
+      - name: Build APK (Debug)
+        run: |
+          cd android
+          chmod +x gradlew
+          ./gradlew assembleDebug
+
+      # 4. Upload APK Artifact (This is the file you want!)
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: year-progress-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      # 5. Deploy Web Version to GitHub Pages
+      - name: Upload Web Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+      - name: Deploy to GitHub Pages
+        uses: actions/deploy-pages@v4
