@@ -22,3 +22,12 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# Android build artifacts (but NOT the android/ source folder)
+android/.gradle/
+android/app/build/
+android/build/
+android/capacitor-android/build/
+*.apk
+*.keystore
+local.properties
