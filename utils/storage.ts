@@ -1,0 +1,34 @@
+
+import { DayLog } from '../types';
+
+const STORAGE_KEY = 'year_progress_logs';
+
+export const getLogs = (): Record<string, DayLog> => {
+  if (typeof window === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch (e) {
+    console.error("Failed to load logs", e);
+    return {};
+  }
+};
+
+export const saveLog = (dateId: string, log: DayLog) => {
+  const current = getLogs();
+  const updated = { ...current, [dateId]: log };
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+  return updated;
+};
+
+export const deleteLog = (dateId: string) => {
+    const current = getLogs();
+    const { [dateId]: deleted, ...rest } = current;
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(rest));
+    return rest;
+}
+
+// Helper to generate a consistent ID for dates (YYYY-MM-DD)
+export const getDateId = (date: Date): string => {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
