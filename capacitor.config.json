@@ -1,0 +1,14 @@
+
+{
+  "appId": "com.yearprogress.app",
+  "appName": "Year Progress",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 0
+    }
+  }
+}
