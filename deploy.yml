@@ -1,4 +1,3 @@
-
 name: Year Progress App Build
 
 on:
@@ -16,10 +15,10 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  build-and-deploy:
+  # Job 1: Build Android APK
+  build-android:
     runs-on: ubuntu-latest
     steps:
-      # 1. Setup Environment
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -35,40 +34,69 @@ jobs:
           distribution: 'zulu'
           java-version: '17'
 
-      # 2. Build Web Application
       - name: Install Dependencies
-        run: |
-          npm ci
-          npm install @capacitor/cli @capacitor/core @capacitor/android
+        run: npm ci
 
       - name: Build Web App
         run: npm run build
 
-      # 3. Generate & Build Android APK
-      - name: Initialize Android Project
-        run: |
-          # Use || true to prevent failure if directory exists
-          npx cap add android || true
-          npx cap sync
+      - name: Sync Capacitor to Android
+        run: npx cap sync android
 
-      - name: Build APK (Debug)
+      # Generate gradle wrapper if missing
+      - name: Setup Gradle Wrapper
+        working-directory: android
         run: |
-          cd android
+          if [ ! -f "gradle/wrapper/gradle-wrapper.jar" ]; then
+            echo "Downloading Gradle Wrapper..."
+            mkdir -p gradle/wrapper
+            curl -L -o gradle/wrapper/gradle-wrapper.jar \
+              https://github.com/nicokant/capacitor-widgetsbridge-plugin/raw/main/android/gradle/wrapper/gradle-wrapper.jar
+          fi
           chmod +x gradlew
-          ./gradlew assembleDebug
 
-      # 4. Upload APK Artifact (This is the file you want!)
+      - name: Build Debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: year-progress-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: error
 
-      # 5. Deploy Web Version to GitHub Pages
-      - name: Upload Web Artifact
+  # Job 2: Deploy to GitHub Pages
+  deploy-web:
+    runs-on: ubuntu-latest
+    needs: build-android
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: 'npm'
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Build Web App
+        run: npm run build
+
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages Artifact
         uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
       - name: Deploy to GitHub Pages
+        id: deployment
         uses: actions/deploy-pages@v4
