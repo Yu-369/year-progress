@@ -1,5 +1,8 @@
 
 import React, { useEffect, useState, useMemo, useRef } from 'react';
+// @ts-ignore
+import html2canvas from 'html2canvas';
+import { motion, AnimatePresence } from 'framer-motion';
 import { generateYearData, formatDate } from './utils/dateHelper';
 import { getLogs, saveLog, deleteLog, getDateId } from './utils/storage';
 import { YearData, DayData, ViewMode, Gender, DayLog } from './types';
@@ -57,18 +60,21 @@ const App: React.FC = () => {
   
   // -- User Settings State --
   const [gender, setGender] = useState<Gender>('MALE');
-  const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1)); // Local time to avoid timezone offset issues
+  const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1)); 
   
   // -- UI State --
   const [hoveredDay, setHoveredDay] = useState<DayData | null>(null);
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState<ViewMode>(ViewMode.MESO);
-  const [isYearOverview, setIsYearOverview] = useState(false);
+  // Default to true for the 15-col grid view
+  const [isYearOverview, setIsYearOverview] = useState(true);
   const [mounted, setMounted] = useState(false);
-  
-  // -- Date Picker UI State --
-  const [isSelectingYear, setIsSelectingYear] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // -- Swipe Handling --
+  const touchStartX = useRef<number | null>(null);
+  const touchStartY = useRef<number | null>(null);
 
   useEffect(() => {
     setData(generateYearData());
@@ -85,9 +91,6 @@ const App: React.FC = () => {
   };
 
   const handleVoidClick = () => {
-    // If a day is selected, we might be opening the modal, so don't deselect yet
-    // Actually, let's keep it simple: clicking void deselects.
-    // The Modal overlays this anyway.
     if (selectedDay) {
         triggerHaptic('light');
         setSelectedDay(null);
@@ -96,7 +99,6 @@ const App: React.FC = () => {
 
   const handleSelectDay = (day: DayData) => {
     if (!day.isFuture) {
-        // Only allow selecting Past/Today
         setSelectedDay(day);
         setHoveredDay(null);
     }
@@ -118,24 +120,73 @@ const App: React.FC = () => {
       triggerHaptic('heavy');
   }
 
-  const handleUpdateDate = (field: 'day' | 'month' | 'year', value: number) => {
-      const newDate = new Date(birthDate);
-      if (field === 'day') newDate.setDate(value);
-      if (field === 'month') newDate.setMonth(value);
-      if (field === 'year') newDate.setFullYear(value);
+  const handleExportVisual = async () => {
+      setIsExporting(true);
+      triggerHaptic('heavy');
       
-      // Validation to ensure date exists (e.g. Feb 31)
-      if (isNaN(newDate.getTime())) return;
-      setBirthDate(newDate);
+      setTimeout(async () => {
+        const element = document.getElementById('visual-export-target');
+        if (element) {
+            try {
+                const canvas = await html2canvas(element, {
+                    backgroundColor: '#050505',
+                    scale: 2, // Retina quality
+                    logging: false,
+                    useCORS: true
+                });
+                const link = document.createElement('a');
+                link.download = `year-progress-snapshot-${new Date().toISOString().slice(0, 10)}.png`;
+                link.href = canvas.toDataURL();
+                link.click();
+            } catch (err) {
+                console.error("Export failed", err);
+            }
+        }
+        setIsExporting(false);
+      }, 500); // Wait for render
   };
 
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (!e.target.value) return;
-      const [y, m, d] = e.target.value.split('-').map(Number);
-      // Construct date in local time
+  const handleNativeDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const val = e.target.value;
+      if (!val) return;
+      
+      // Parse YYYY-MM-DD manually to prevent UTC shift
+      const [y, m, d] = val.split('-').map(Number);
       const newDate = new Date(y, m - 1, d);
-      if (!isNaN(newDate.getTime())) {
-          setBirthDate(newDate);
+      
+      setBirthDate(newDate);
+      triggerHaptic('tick');
+  };
+
+  // -- SWIPE LOGIC --
+  const onTouchStart = (e: React.TouchEvent) => {
+      if (e.touches.length > 1) {
+          touchStartX.current = null;
+          touchStartY.current = null;
+          return;
+      }
+      touchStartX.current = e.touches[0].clientX;
+      touchStartY.current = e.touches[0].clientY;
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+      if (!touchStartX.current || !touchStartY.current) return;
+      
+      const diffX = touchStartX.current - e.changedTouches[0].clientX;
+      const diffY = touchStartY.current - e.changedTouches[0].clientY;
+
+      touchStartX.current = null;
+      touchStartY.current = null;
+
+      if (Math.abs(diffX) > Math.abs(diffY) && Math.abs(diffX) > 50) {
+          if (diffX > 0) {
+              if (currentView === ViewMode.MICRO) setCurrentView(ViewMode.MESO);
+              else if (currentView === ViewMode.MESO) setCurrentView(ViewMode.MACRO);
+          } else {
+              if (currentView === ViewMode.MACRO) setCurrentView(ViewMode.MESO);
+              else if (currentView === ViewMode.MESO) setCurrentView(ViewMode.MICRO);
+          }
+          triggerHaptic('light');
       }
   };
 
@@ -158,10 +209,8 @@ const App: React.FC = () => {
   if (!mounted || !data) return null;
 
   const activeDay = hoveredDay;
-  const daysLeft = data.totalDays - data.daysPassed;
   const percentage = Math.floor(data.percentage);
 
-  // Helper to determine slide position based on view index
   const viewOrder = [ViewMode.MICRO, ViewMode.MESO, ViewMode.MACRO];
   const activeIndex = viewOrder.indexOf(currentView);
 
@@ -170,21 +219,32 @@ const App: React.FC = () => {
     const offset = (index - activeIndex) * 100; 
     return {
       transform: `translateX(${offset}%)`,
+      willChange: 'transform',
       visibility: Math.abs(index - activeIndex) > 1 ? 'hidden' as const : 'visible' as const, 
     };
   };
 
-  const generateYearList = () => {
-      const currentYear = new Date().getFullYear();
-      const years = [];
-      for (let y = currentYear; y >= 1900; y--) {
-          years.push(y);
+  // -- View Context Labels --
+  const getViewTitle = () => {
+      switch(currentView) {
+          case ViewMode.MICRO: return "Solar Cycle";
+          case ViewMode.MESO: return "Annual Orbit";
+          case ViewMode.MACRO: return "Life Span";
+          default: return "";
       }
-      return years;
   };
 
-  // Format birthdate for input value manually to avoid UTC conversion shifts
-  const birthDateInputValue = `${birthDate.getFullYear()}-${String(birthDate.getMonth() + 1).padStart(2, '0')}-${String(birthDate.getDate()).padStart(2, '0')}`;
+  const getViewSubtitle = () => {
+      switch(currentView) {
+          case ViewMode.MICRO: return "Daily Rotation";
+          case ViewMode.MESO: return `Day ${data.daysPassed} of ${data.totalDays}`;
+          case ViewMode.MACRO: return "Memento Mori";
+          default: return "";
+      }
+  };
+
+  // Helper for input value
+  const dateInputValue = `${birthDate.getFullYear()}-${String(birthDate.getMonth() + 1).padStart(2, '0')}-${String(birthDate.getDate()).padStart(2, '0')}`;
 
   return (
     <div 
@@ -192,6 +252,21 @@ const App: React.FC = () => {
       onClick={handleVoidClick}
     >
       <div className="noise-overlay" />
+
+      {/* -- HIDDEN EXPORT TARGET -- */}
+      {isExporting && (
+          <div id="visual-export-target" className="fixed top-0 left-0 w-[1080px] h-[1920px] bg-[#050505] z-[9999] p-20 flex flex-col items-center justify-between pointer-events-none">
+              <div className="w-full flex justify-between items-start border-b border-white/20 pb-10">
+                  <h1 className="text-8xl font-display font-bold text-white tracking-tighter">YEAR<br/><span className="text-acid">{data.year}</span></h1>
+              </div>
+              <div className="flex-1 w-full flex items-center justify-center my-12 scale-150">
+                 <YearGrid 
+                    data={data} logs={logs} hoveredDay={null} selectedDay={null} isOverview={true}
+                    onHoverDay={() => {}} onSelectDay={() => {}} onToggleOverview={() => {}}
+                 />
+              </div>
+          </div>
+      )}
 
       {/* -- DAY DETAIL MODAL -- */}
       {selectedDay && (
@@ -204,159 +279,152 @@ const App: React.FC = () => {
           />
       )}
       
-      {/* -- MENU LAYER -- */}
-      {/* Backdrop */}
+      {/* -- SIDEBAR MENU (LEFT DRAWER) -- */}
       <div 
-        className={`
-            fixed inset-0 z-[60] bg-void/10 backdrop-blur-sm transition-opacity duration-500
-            ${isMenuOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none delay-200'}
-        `}
-        onClick={() => {
-            triggerHaptic('light');
-            setIsMenuOpen(false);
-            setIsSelectingYear(false);
-        }} 
+        className={`fixed inset-0 z-[60] bg-black/60 backdrop-blur-sm transition-opacity duration-500 ${isMenuOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={() => setIsMenuOpen(false)}
       />
 
-      {/* Card Slide Panel */}
       <div 
         className={`
-            fixed inset-0 z-[65] flex flex-col items-center justify-center p-8 text-center 
-            bg-void/80 backdrop-blur-2xl transition-transform duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]
-            ${isMenuOpen ? 'translate-y-0' : '-translate-y-full'}
+            fixed top-0 bottom-0 left-0 w-80 max-w-[85vw] bg-[#0A0A0A] border-r border-white/10 shadow-[20px_0_40px_rgba(0,0,0,0.5)] z-[65]
+            transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col
+            ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
+        onClick={(e) => e.stopPropagation()}
       >
-            <span className="text-acid font-mono text-[10px] tracking-[0.6em] mb-12 uppercase border-b border-acid/20 pb-2 drop-shadow-lg">Configuration</span>
-            
-            {/* -- IDENTITY MODULE -- */}
-            <div className="w-full max-w-sm mb-12 flex flex-col gap-8 relative z-10">
-               
-               {/* -- DATE SELECTOR -- */}
-               <div className="w-full">
-                  <div className="text-white/50 text-[9px] uppercase tracking-[0.3em] mb-4 text-left pl-1">Date of Origin</div>
-                  
-                  {isSelectingYear ? (
-                      // Year Selection Matrix
-                      <div className="absolute inset-0 z-20 bg-void/90 border border-white/10 rounded-xl flex flex-col p-4 h-[300px] shadow-2xl backdrop-blur-xl">
-                          <div className="text-white/40 text-[10px] uppercase tracking-widest mb-2 flex justify-between">
-                              <span>Select Year</span>
-                              <button onClick={() => setIsSelectingYear(false)} className="text-acid hover:text-white">Close</button>
-                          </div>
-                          <div className="grid grid-cols-4 gap-2 overflow-y-auto no-scrollbar flex-1 pb-4">
-                              {generateYearList().map(year => (
-                                  <button
-                                    key={year}
-                                    onClick={(e) => {
-                                        e.stopPropagation();
-                                        triggerHaptic('tick');
-                                        handleUpdateDate('year', year);
-                                        setIsSelectingYear(false);
-                                    }}
-                                    className={`
-                                        py-2 text-sm font-mono rounded hover:bg-white/10 transition-colors
-                                        ${birthDate.getFullYear() === year ? 'text-acid font-bold bg-white/5' : 'text-white/50'}
-                                    `}
-                                  >
-                                      {year}
-                                  </button>
-                              ))}
-                          </div>
-                      </div>
-                  ) : (
-                      // Standard Display
-                      <div className="flex items-baseline justify-between gap-2 border-b border-white/30 pb-2">
-                         <div className="relative group cursor-pointer">
-                             <input 
-                                type="date"
-                                value={birthDateInputValue}
-                                onChange={handleDateChange}
-                                className="absolute inset-0 opacity-0 z-10 w-full h-full"
-                             />
-                             <span className="text-4xl font-display font-bold text-white tracking-tight group-hover:text-acid transition-colors drop-shadow-lg">
-                                {birthDate.getDate().toString().padStart(2, '0')}
-                             </span>
-                         </div>
-                         
-                         <div className="relative group cursor-pointer">
-                             <input 
-                                type="date"
-                                value={birthDateInputValue}
-                                onChange={handleDateChange}
-                                className="absolute inset-0 opacity-0 z-10 w-full h-full"
-                             />
-                             <span className="text-4xl font-display font-bold text-white/70 tracking-tight group-hover:text-acid/70 transition-colors uppercase drop-shadow-lg">
-                                {birthDate.toLocaleString('default', { month: 'short' })}
-                             </span>
-                         </div>
+        <div className="flex-1 overflow-y-auto p-8 pt-24 flex flex-col gap-8 no-scrollbar">
+             {/* Header */}
+             <div className="pb-6 border-b border-white/5">
+                <h2 className="text-3xl font-display font-bold text-white tracking-tight">System Config</h2>
+            </div>
 
-                         {/* YEAR - Triggers Matrix */}
-                         <button 
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                triggerHaptic('tick');
-                                setIsSelectingYear(true);
-                            }}
-                            className="text-4xl font-display font-bold text-white/40 tracking-tight hover:text-acid/40 transition-colors drop-shadow-lg"
-                         >
-                            {birthDate.getFullYear()}
-                         </button>
-                      </div>
-                  )}
-               </div>
+            {/* 1. Origin Settings (STYLED NATIVE) */}
+            <div>
+                 <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest block mb-4">Origin Date</span>
+                 
+                 <div className="relative group w-full cursor-pointer">
+                    {/* Visual Layer */}
+                    <div className="flex items-stretch bg-[#111] border border-white/10 rounded-xl overflow-hidden transition-all duration-300 group-hover:border-acid/30 group-hover:shadow-[0_0_15px_rgba(204,255,0,0.05)]">
+                        {/* Year Block */}
+                        <div className="flex-1 flex flex-col items-center justify-center p-3 border-r border-white/10 bg-white/5">
+                            <span className="text-[9px] font-mono text-white/30 uppercase">Year</span>
+                            <span className="text-xl font-display font-bold text-white tracking-tight">{birthDate.getFullYear()}</span>
+                        </div>
+                         {/* Month Block */}
+                         <div className="flex-1 flex flex-col items-center justify-center p-3 border-r border-white/10">
+                            <span className="text-[9px] font-mono text-white/30 uppercase">Month</span>
+                            <span className="text-xl font-display font-bold text-white tracking-tight">{String(birthDate.getMonth() + 1).padStart(2, '0')}</span>
+                        </div>
+                         {/* Day Block */}
+                         <div className="flex-1 flex flex-col items-center justify-center p-3 relative overflow-hidden">
+                             <div className="absolute top-0 right-0 p-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                 <div className="w-1.5 h-1.5 bg-acid rounded-full shadow-[0_0_5px_#CCFF00]"></div>
+                             </div>
+                            <span className="text-[9px] font-mono text-white/30 uppercase">Day</span>
+                            <span className="text-xl font-display font-bold text-white tracking-tight">{String(birthDate.getDate()).padStart(2, '0')}</span>
+                        </div>
+                    </div>
 
-               {/* Gender Selector */}
-               <div className="w-full">
-                  <div className="text-white/50 text-[9px] uppercase tracking-[0.3em] mb-3 text-left pl-1">Biotype</div>
-                  <div className="flex gap-4">
+                    {/* Interaction Layer (Invisible Native Input) */}
+                    <input 
+                        type="date"
+                        required
+                        value={dateInputValue}
+                        onChange={handleNativeDateChange}
+                        onClick={() => triggerHaptic('light')}
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                    />
+                 </div>
+            </div>
+
+            {/* 2. Biotype Settings */}
+            <div>
+                 <span className="block text-[10px] font-mono text-white/50 uppercase tracking-widest mb-4">Biotype</span>
+                 <div className="flex gap-2">
                     {['MALE', 'FEMALE'].map((g) => (
-                      <button
+                    <button
                         key={g}
-                        onClick={() => setGender(g as Gender)}
+                        onClick={() => { setGender(g as Gender); triggerHaptic('tick'); }}
                         className={`
-                            flex-1 py-4 px-4 text-sm font-display tracking-widest uppercase transition-all duration-300 border backdrop-blur-md shadow-lg
+                            flex-1 py-4 rounded-xl text-[10px] font-mono tracking-widest uppercase transition-all duration-300 border
                             ${gender === g 
-                                ? 'bg-acid/90 text-void border-acid font-bold' 
-                                : 'bg-black/20 text-white/60 border-white/20 hover:border-white/40 hover:text-white'}
+                                ? 'bg-acid text-black border-acid font-bold shadow-[0_0_20px_rgba(204,255,0,0.2)]' 
+                                : 'bg-[#111] text-white/30 border-white/10 hover:border-white/20 hover:text-white'}
                         `}
-                      >
+                    >
                         {g}
-                      </button>
+                    </button>
                     ))}
-                  </div>
-               </div>
+                 </div>
             </div>
-            
-            {/* -- STATS MODULE -- */}
-            <div className="w-full max-w-sm border-t border-white/20 pt-12 z-10">
-                 <div className="text-white/50 text-[9px] uppercase tracking-[0.3em] mb-6">System Clock</div>
-                 <PreciseTimerDisplay totalDays={data.totalDays} />
-            </div>
-            
-            <div className="mt-12 z-10">
+
+            {/* 3. Actions */}
+            <div className="mt-auto pt-8 flex flex-col gap-3">
                  <button 
-                    className="group relative px-8 py-3 overflow-hidden rounded-full bg-black/40 border border-white/10 hover:bg-white/10 transition-all duration-300 backdrop-blur-md shadow-xl"
+                    onClick={handleExportVisual}
+                    disabled={isExporting}
+                    className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-white/10 hover:bg-white/5 text-white transition-all active:scale-95 group"
+                 >
+                    <div className="p-1 rounded bg-white/5 group-hover:bg-white/10 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest">{isExporting ? 'Processing...' : 'Export Visual'}</span>
+                 </button>
+
+                 <button 
                     onClick={() => {
-                        triggerHaptic('light');
-                        setIsMenuOpen(false);
+                        triggerHaptic('tick');
+                        const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
+                        const anchor = document.createElement('a');
+                        anchor.href = dataStr;
+                        anchor.download = "year_log_backup.json";
+                        anchor.click();
                     }}
-                >
-                    <span className="relative z-10 text-[10px] font-mono uppercase tracking-[0.3em] text-white group-hover:text-acid transition-colors">Return</span>
-                </button>
+                    className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-white/10 hover:bg-white/5 text-white transition-all active:scale-95 group"
+                 >
+                    <div className="p-1 rounded bg-white/5 group-hover:bg-white/10 transition-colors">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                    </div>
+                    <span className="text-[10px] font-mono uppercase tracking-widest">Backup JSON</span>
+                 </button>
             </div>
+            
+            <div className="pt-8 border-t border-white/5">
+                <PreciseTimerDisplay totalDays={data.totalDays} />
+            </div>
+        </div>
       </div>
 
-      {/* -- HEADER -- */}
-      <div className="absolute top-0 left-0 right-0 z-[70] pointer-events-none">
-          <div className="absolute inset-0 h-32 bg-gradient-to-b from-void via-void/90 to-transparent pointer-events-none"></div>
-          <StatsHeader 
-            data={data} 
-            isOpen={isMenuOpen}
-            onMenuClick={() => setIsMenuOpen(!isMenuOpen)} 
-          />
+      <StatsHeader 
+        data={data} 
+        isOpen={isMenuOpen}
+        onMenuClick={() => setIsMenuOpen(!isMenuOpen)} 
+      />
+      
+      {/* -- VIEW CONTEXT TITLE -- */}
+      <div className="fixed top-24 left-0 w-full text-center z-40 pointer-events-none mix-blend-difference">
+          <AnimatePresence mode="wait">
+            <motion.div
+                key={currentView}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.5, ease: "easeOut" }}
+                className="flex flex-col items-center"
+            >
+                <h2 className="text-xl font-display font-bold text-white tracking-widest uppercase">{getViewTitle()}</h2>
+                <span className="text-[10px] font-mono text-white/40 tracking-[0.3em] mt-1 uppercase">{getViewSubtitle()}</span>
+            </motion.div>
+          </AnimatePresence>
       </div>
 
       {/* -- MAIN SLIDING STAGE -- */}
-      <div className="relative flex-1 w-full h-full overflow-hidden z-10">
+      <div 
+        className="relative flex-1 w-full h-full overflow-hidden z-10"
+        onTouchStart={onTouchStart}
+        onTouchEnd={onTouchEnd}
+      >
         
         {/* VIEW 0: MICRO */}
         <div 
@@ -368,13 +436,23 @@ const App: React.FC = () => {
              </div>
         </div>
 
-        {/* VIEW 1: MESO */}
+        {/* VIEW 1: MESO (MATRIX) */}
         <div 
-          className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] w-full h-full"
+          className="absolute inset-0 transition-transform duration-500 ease-[cubic-bezier(0.16,1,0.3,1)] w-full h-full flex flex-col items-center justify-center"
           style={getSlideStyle(ViewMode.MESO)}
         >
-            <div className="w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar pt-32 pb-48 scroll-smooth">
-                <div className="w-full min-h-full flex items-center justify-center">
+            {/* Animating Container for Scroll vs Center Layout */}
+            <motion.div 
+                layout
+                className={`w-full h-full overflow-hidden
+                     ${isYearOverview 
+                        ? 'overflow-y-auto no-scrollbar pt-48 pb-32' // Adjusted for fit
+                        : 'overflow-y-auto no-scrollbar pt-56 pb-48'
+                     }
+                `}
+                transition={{ type: "spring", stiffness: 120, damping: 20, mass: 0.8 }}
+            >
+                <div className={`w-full min-h-full flex items-center justify-center`}>
                     <YearGrid 
                         data={data} 
                         logs={logs}
@@ -386,7 +464,7 @@ const App: React.FC = () => {
                         onToggleOverview={() => setIsYearOverview(!isYearOverview)}
                     />
                 </div>
-            </div>
+            </motion.div>
         </div>
 
         {/* VIEW 2: MACRO */}
@@ -426,11 +504,8 @@ const App: React.FC = () => {
                 )}
                 
                 {currentView === ViewMode.MICRO && (
-                     <div className="animate-reveal flex flex-col items-center gap-2">
-                         <div className="text-4xl font-display font-bold text-white tracking-tighter">24H</div>
-                         <div className="text-white/40 text-[9px] uppercase tracking-[0.3em]">
-                             Daily Cycle
-                        </div>
+                     <div className="animate-reveal">
+                         <DayCompletionDisplay />
                     </div>
                 )}
 
@@ -452,6 +527,35 @@ const App: React.FC = () => {
             </div>
           </footer>
       </div>
+    </div>
+  );
+};
+
+const DayCompletionDisplay: React.FC = () => {
+  const [percent, setPercent] = useState("0.00");
+  
+  useEffect(() => {
+    let frameId: number;
+    const update = () => {
+      const now = new Date();
+      const totalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds() + now.getMilliseconds() / 1000;
+      const p = (totalSeconds / 86400) * 100;
+      setPercent(p.toFixed(2));
+      frameId = requestAnimationFrame(update);
+    };
+    frameId = requestAnimationFrame(update);
+    return () => cancelAnimationFrame(frameId);
+  }, []);
+
+  return (
+    <div className="flex flex-col items-center">
+      <div className="flex items-start justify-center relative">
+        <h1 className="text-6xl font-display font-bold text-white tracking-tighter tabular-nums">
+            {percent}
+        </h1>
+        <span className="text-2xl font-display text-acid font-bold mt-2 -ml-2">%</span>
+      </div>
+      <span className="text-[9px] text-white/30 tracking-[0.3em] uppercase mt-1">Day Completion</span>
     </div>
   );
 };
@@ -486,7 +590,7 @@ const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, 
 const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => {
     const precise = usePreciseProgress(totalDays);
     return (
-        <div className="text-4xl font-display font-bold text-white tabular-nums tracking-tighter drop-shadow-xl">
+        <div className="text-xl font-display font-bold text-white/20 tabular-nums tracking-tighter">
             {precise}%
         </div>
     )

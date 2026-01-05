@@ -1,3 +1,4 @@
+
 import React, { useMemo, useRef } from 'react';
 import { Gender } from '../types';
 
@@ -30,9 +31,24 @@ export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
 
   return (
     <div className="w-full flex flex-col items-center pt-8 pb-32 relative animate-reveal">
+      {/* Legend */}
+      <div className="flex gap-6 mb-8">
+          <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-[#333]"></div>
+              <span className="text-[10px] font-mono uppercase text-white/40 tracking-widest">Past</span>
+          </div>
+          <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-acid shadow-[0_0_5px_#CCFF00]"></div>
+              <span className="text-[10px] font-mono uppercase text-acid tracking-widest">Present</span>
+          </div>
+          <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full border border-white/10"></div>
+              <span className="text-[10px] font-mono uppercase text-white/20 tracking-widest">Future</span>
+          </div>
+      </div>
+
       <div className="flex w-full max-w-[360px] pl-4 pr-4">
-          
-          {/* The Bio-Grid - No Rulers, just data */}
+          {/* The Bio-Grid */}
           <div 
             ref={containerRef}
             className="grid gap-x-[1px] gap-y-[2px] w-full touch-pan-y"
@@ -48,7 +64,7 @@ export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
                     <div
                         key={i}
                         className={`
-                            aspect-square rounded-sm
+                            aspect-square rounded-sm transition-all duration-300
                             ${isCurrent ? 'z-10 scale-150 relative' : ''}
                         `}
                         style={{

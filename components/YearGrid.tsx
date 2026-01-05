@@ -1,5 +1,6 @@
 
-import React, { useRef, useCallback, useState, useEffect } from 'react';
+import React, { useRef, useCallback } from 'react';
+import { motion } from 'framer-motion'; 
 import { DayData, YearData, DayLog } from '../types';
 import { getDateId } from '../utils/storage';
 
@@ -25,9 +26,8 @@ export const YearGrid: React.FC<YearGridProps> = ({
   onToggleOverview
 }) => {
   const lastVibratedIndex = useRef<number>(-1);
-  const pinchStartDist = useRef<number>(0);
+  const pinchStartDist = useRef<number | null>(null);
   const allDays = data.days;
-  const [animState, setAnimState] = useState<'idle' | 'zooming-out' | 'zooming-in'>('idle');
 
   const triggerHaptic = useCallback((pattern: 'tick' | 'heavy' = 'tick') => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -36,57 +36,173 @@ export const YearGrid: React.FC<YearGridProps> = ({
     }
   }, []);
 
-  useEffect(() => {
-    setAnimState(isOverview ? 'zooming-out' : 'zooming-in');
-    const t = setTimeout(() => setAnimState('idle'), 500);
-    return () => clearTimeout(t);
-  }, [isOverview]);
-
-  const getDayStyle = (day: DayData, isActive: boolean, isSmall: boolean) => {
-    const log = logs[getDateId(day.date)];
-    let classes = isSmall ? 'w-2 h-2' : 'w-2 h-2';
-    if (!isSmall && isActive) classes = 'w-4 h-4';
-    if (!isSmall && day.isToday) classes = 'w-3 h-3';
-
-    if (day.isToday) return `${classes} bg-acid rounded-none z-30 shadow-[0_0_20px_#CCFF00] animate-pulse`;
-
-    if (day.isPast && log) {
-        if (log.impact === 'HIGH') return `${classes} bg-acid rounded-full shadow-[0_0_15px_#CCFF00] z-20 scale-125 border border-white/20 animate-pulse-fast`; 
-        if (log.impact === 'NEUTRAL') return `${classes} bg-white rounded-full opacity-100 shadow-[0_0_5px_rgba(255,255,255,0.3)]`; 
-        if (log.impact === 'LOW') return `${classes} bg-white/20 rounded-full scale-75 border border-white/5`; 
+  // -- Pinch Logic --
+  const onTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      pinchStartDist.current = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
     }
+  };
 
-    if (day.isPast) return `${classes} bg-[#111] rounded-full border border-white/[0.04]`;
-    return `${classes} border border-white/[0.08] bg-transparent rounded-full opacity-30`;
+  const onTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && pinchStartDist.current !== null) {
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const currentDist = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+      
+      const threshold = 50; 
+      const diff = currentDist - pinchStartDist.current;
+
+      if (Math.abs(diff) > threshold) {
+        if (diff < 0 && !isOverview) {
+           onToggleOverview();
+           triggerHaptic('heavy');
+           pinchStartDist.current = null; 
+        } else if (diff > 0 && isOverview) {
+           onToggleOverview();
+           triggerHaptic('heavy');
+           pinchStartDist.current = null;
+        }
+      }
+    }
+  };
+
+  const onTouchEnd = () => {
+      pinchStartDist.current = null;
+  };
+
+  const getDayColor = (day: DayData, isActive: boolean) => {
+    const log = logs[getDateId(day.date)];
+    
+    // Today
+    if (day.isToday) return { bg: 'bg-acid', border: 'border-transparent', shadow: 'shadow-[0_0_10px_#CCFF00]' };
+    
+    // Past with Log
+    if (day.isPast && log) {
+         if (log.impact === 'HIGH') return { bg: 'bg-acid', border: 'border-acid', shadow: 'shadow-[0_0_8px_#CCFF00]' };
+         if (log.impact === 'NEUTRAL') return { bg: 'bg-white', border: 'border-white', shadow: 'shadow-[0_0_5px_rgba(255,255,255,0.4)]' };
+         return { bg: 'bg-[#222]', border: 'border-white/20', shadow: 'none' }; 
+    }
+    
+    // Past Empty
+    if (day.isPast) return { bg: 'bg-[#111]', border: 'border-white/5', shadow: 'none' };
+    
+    // Future
+    return { bg: 'bg-transparent', border: 'border-white/5', shadow: 'none' };
+  };
+
+  // Improved Spring Physics for organic feel
+  const springTransition = {
+      type: "spring",
+      stiffness: 120,
+      damping: 20,
+      mass: 0.8
   };
 
   return (
     <div 
-      className={`mx-auto relative z-30 flex flex-col gap-10 transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)] ${isOverview ? 'max-w-[300px]' : 'max-w-[340px]'}`}
+      className={`mx-auto relative z-30 flex flex-col
+        ${isOverview ? 'w-full justify-start' : 'w-full h-full justify-center px-4 max-w-[340px]'}`}
       onMouseLeave={() => { onHoverDay(null); lastVibratedIndex.current = -1; }}
+      onTouchStart={onTouchStart}
+      onTouchMove={onTouchMove}
+      onTouchEnd={onTouchEnd}
     >
-      <div className={`flex justify-end w-full px-2 sticky top-0 z-[100] transition-opacity duration-300 ${isOverview ? 'opacity-100' : 'opacity-80'}`}>
-          <button onClick={(e) => { e.stopPropagation(); triggerHaptic('tick'); onToggleOverview(); }}
-            className={`px-5 py-2 text-[10px] uppercase tracking-[0.3em] border rounded-full backdrop-blur-xl transition-all duration-500
-                ${isOverview ? 'border-acid text-acid bg-acid/10 shadow-[0_0_15px_rgba(204,255,0,0.1)]' : 'border-white/10 text-white/50 bg-white/5 hover:bg-white/10 hover:text-white'}
-            `}>
-            {isOverview ? 'Matrix Mode' : 'Focus Mode'}
-          </button>
-      </div>
+      {/* 
+         FIXED Floating Toggle Button 
+         Positioned fixed top-centered below header text
+      */}
+      <motion.button 
+          layout
+          onClick={(e) => { 
+             e.stopPropagation(); 
+             triggerHaptic('tick'); 
+             onToggleOverview(); 
+          }}
+          className={`
+              fixed top-40 left-1/2 -translate-x-1/2 z-[90]
+              flex items-center gap-2 px-4 py-2 rounded-full border border-white/10
+              backdrop-blur-md transition-all duration-300 active:scale-95 shadow-xl
+              ${isOverview ? 'bg-acid/10 text-acid border-acid/30' : 'bg-black/60 text-white/50 hover:bg-white/10 hover:text-white'}
+          `}
+          initial={false}
+      >
+          <span className="text-[10px] font-mono uppercase tracking-[0.2em] font-bold">
+              {isOverview ? ':: GRID ::' : ':: LIST ::'}
+          </span>
+      </motion.button>
 
-      <div className={`${isOverview ? 'grid grid-cols-[repeat(14,1fr)] gap-y-3' : 'grid grid-cols-7 gap-y-8 gap-x-4'} place-items-center pb-32 transition-all duration-700`}>
-        {allDays.map((day, index) => (
-            <div
-              key={day.dayOfYear}
-              data-day-index={index}
-              onMouseEnter={() => { if (!isOverview && lastVibratedIndex.current !== index) { lastVibratedIndex.current = index; triggerHaptic('tick'); onHoverDay(day); } }}
-              onClick={(e) => { e.stopPropagation(); triggerHaptic('heavy'); onSelectDay(day); }}
-              className="flex items-center justify-center cursor-pointer group w-8 h-8"
-            >
-              <div className={`transition-all duration-500 ease-out ${getDayStyle(day, (selectedDay?.dayOfYear === day.dayOfYear || hoveredDay?.dayOfYear === day.dayOfYear), isOverview)}`} />
-            </div>
-        ))}
-      </div>
+      <motion.div 
+        layout
+        className={`
+          grid place-items-center mt-0
+          ${isOverview 
+            ? 'grid-cols-[repeat(15,minmax(0,1fr))] gap-y-[2px] gap-x-[2px] w-full px-5' 
+            : 'grid-cols-7 gap-y-6 gap-x-4 w-full pb-32' 
+          }
+        `}
+        transition={springTransition}
+      >
+        {allDays.map((day, index) => {
+            const isHovered = hoveredDay?.dayOfYear === day.dayOfYear;
+            const isSelected = selectedDay?.dayOfYear === day.dayOfYear;
+            const style = getDayColor(day, isSelected || isHovered);
+            
+            // Uniform dot sizing logic for both views as requested
+            const dotSize = (day.isToday || isSelected) ? 'w-3 h-3' : 'w-2 h-2';
+            
+            return (
+                <motion.div
+                  layout
+                  key={day.dayOfYear}
+                  data-day-index={index}
+                  onMouseEnter={() => { if (!isOverview && lastVibratedIndex.current !== index) { lastVibratedIndex.current = index; triggerHaptic('tick'); onHoverDay(day); } }}
+                  onClick={(e) => { 
+                      e.stopPropagation(); 
+                      if (day.isFuture) {
+                          triggerHaptic('tick');
+                          return;
+                      }
+                      triggerHaptic('heavy'); 
+                      onSelectDay(day); 
+                  }}
+                  className={`relative flex items-center justify-center cursor-pointer group rounded-full transition-opacity
+                    ${isOverview ? 'w-full aspect-square' : 'w-8 h-8'} 
+                    ${day.isFuture ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}
+                  `}
+                  transition={springTransition}
+                >
+                  <motion.div 
+                    layout
+                    className={`
+                        rounded-full transition-colors duration-300
+                        ${style.bg} ${style.border} ${style.shadow} border
+                        ${dotSize}
+                    `}
+                    transition={springTransition}
+                  />
+                  
+                  {!isOverview && (isSelected || isHovered) && (
+                      <motion.div 
+                        layoutId="focusRing"
+                        className="absolute inset-0 border border-white/40 rounded-full"
+                        initial={{ scale: 0.8, opacity: 0 }}
+                        animate={{ scale: 1.4, opacity: 1 }}
+                        exit={{ scale: 0.8, opacity: 0 }}
+                        transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                      />
+                  )}
+                </motion.div>
+            );
+        })}
+      </motion.div>
     </div>
   );
 };

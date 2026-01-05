@@ -1,5 +1,7 @@
 {
   "name": "Year Progress",
   "description": "A minimal, calm visualization of the current year's progress, helping users visualize time passing with a clean, data-focused grid interface.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "geolocation"
+  ]
 }
