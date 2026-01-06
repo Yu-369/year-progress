@@ -67,29 +67,36 @@ class EntropyWidget : AppWidgetProvider() {
         
         val gap = 12f
         val dotSize = (availableWidth - (gap * (cols - 1))) / cols
+        val radius = dotSize / 2f
         
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
         
         // Colors
         val acidGreen = Color.parseColor("#CCFF00")
-        val dimGray = Color.parseColor("#333333")
+        val dimGray = Color.parseColor("#444444") // Lighter gray for outline visibility
 
         for (i in 0 until totalDays) {
             val col = i % cols
             val row = i / cols
             
-            val cx = margin + col * (dotSize + gap) + dotSize / 2
-            val cy = margin + row * (dotSize + gap) + dotSize / 2
+            val cx = margin + col * (dotSize + gap) + radius
+            val cy = margin + row * (dotSize + gap) + radius
             
             if (i < daysPassed) {
+                // Past: Filled Light Circle
+                paint.style = Paint.Style.FILL
                 paint.color = acidGreen
-                paint.setShadowLayer(10f, 0f, 0f, acidGreen)
+                paint.setShadowLayer(8f, 0f, 0f, acidGreen)
+                canvas.drawCircle(cx, cy, radius, paint)
             } else {
+                // Future: Outlined Circle
+                paint.style = Paint.Style.STROKE
+                paint.strokeWidth = 3f
                 paint.color = dimGray
                 paint.clearShadowLayer()
+                // Adjust radius slightly for stroke to be inside/centered
+                canvas.drawCircle(cx, cy, radius - 1.5f, paint)
             }
-            
-            canvas.drawCircle(cx, cy, dotSize / 2, paint)
         }
         
         return bitmap

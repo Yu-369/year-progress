@@ -32,10 +32,12 @@ class GhostWidget : AppWidgetProvider() {
         appWidgetId: Int
     ) {
         val userState = WidgetHelper.getUserState(context)
-        
+        // Sync Logic: Ensure we are calculating weeks based on BirthDate
+        val weeksLived = getWeeksLived(userState.birthDate)
+
         val views = RemoteViews(context.packageName, R.layout.widget_ghost)
         
-        val bitmap = drawLifeGrid(userState.birthDate)
+        val bitmap = drawGhostGrid(weeksLived)
         views.setImageViewBitmap(R.id.widget_ghost_canvas, bitmap)
 
         val intent = Intent(context, MainActivity::class.java)
@@ -50,71 +52,73 @@ class GhostWidget : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun drawLifeGrid(birthDate: Long): Bitmap {
+    private fun getWeeksLived(birthDateMillis: Long): Int {
+        val now = System.currentTimeMillis()
+        val diff = now - birthDateMillis
+        return (diff / (1000L * 60 * 60 * 24 * 7)).toInt()
+    }
+
+    private fun drawGhostGrid(weeksLived: Int): Bitmap {
         val width = 800
         val height = 800
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
-        // 80 years * 52 weeks = 4160 dots.
-        // Grid: 52 columns (weeks), 80 rows (years).
+        // 80 Years * 52 Weeks = 4160 weeks.
+        // Grid: 52 columns, 80 rows.
         val cols = 52
         val rows = 80
+        val totalWeeks = cols * rows
         
-        val margin = 20f
-        val availableWidth = width - (margin * 2)
-        val availableHeight = height - (margin * 2)
+        // Calculate Size to Fit
+        // We want some margin
+        val margin = 50f // Initial guess
+        val availableW = width - (margin * 2)
+        val availableH = height - (margin * 2)
         
-        // Calculate gap and dot size.
-        // Since we have many rows, dots must be small.
+        // Determine square size based on Width constraint (usually tighter for 52 cols)
+        // gap = 2f
         val gap = 4f
-        val dotWidth = (availableWidth - (gap * (cols - 1))) / cols
-        val dotHeight = (availableHeight - (gap * (rows - 1))) / rows
+        val squareSize = (availableW - (gap * (cols - 1))) / cols
         
-        // Use the smaller dimension to keep aspect ratio square-ish if desired,
-        // or stretch. Let's strictly calculate based on available space.
-        // dots will likely be rectangular if we don't constrain.
-        // Let's force them to be square by taking min.
-        val size = minOf(dotWidth, dotHeight)
+        // Re-calculate margins to CENTER EXACTLY
+        val contentWidth = cols * squareSize + (cols - 1) * gap
+        val contentHeight = rows * squareSize + (rows - 1) * gap
+        
+        val startX = (width - contentWidth) / 2f
+        val startY = (height - contentHeight) / 2f
         
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        val acidGreen = Color.parseColor("#CCFF00")
-        val dimGray = Color.parseColor("#1A1A1A") // Very dark for future
-        val livedColor = Color.parseColor("#444444") // Lived weeks
 
-        // Calculate weeks passed
-        val now = System.currentTimeMillis()
-        val diff = now - birthDate
-        val weeksPassed = (diff / (1000L * 60 * 60 * 24 * 7)).toInt()
-        val totalWeeks = rows * cols
+        val livedColor = Color.parseColor("#444444") // Dim Gray for lived
+        val futureColor = Color.parseColor("#1A1A1A")     // Very dark for future
+        val currentColor = Color.parseColor("#CCFF00") // Acid Green for current week
 
         for (i in 0 until totalWeeks) {
             val col = i % cols
             val row = i / cols
             
-            val cx = margin + col * (size + gap)
-            val cy = margin + row * (size + gap)
+            val left = startX + col * (squareSize + gap)
+            val top = startY + row * (squareSize + gap)
+            val right = left + squareSize
+            val bottom = top + squareSize
             
-            if (i < weeksPassed) {
+            if (i < weeksLived) {
                 paint.color = livedColor
-                if (i > weeksPassed - 2) { // Current week highlight
-                     paint.color = acidGreen
-                     paint.setShadowLayer(8f, 0f, 0f, acidGreen)
-                } else {
-                     paint.clearShadowLayer()
-                }
+            } else if (i == weeksLived) {
+                paint.color = currentColor
+                // optional glow for current week
+                paint.setShadowLayer(5f, 0f, 0f, currentColor)
             } else {
-                paint.color = dimGray
+                paint.color = futureColor
                 paint.clearShadowLayer()
             }
             
-            canvas.drawRect(cx, cy, cx + size, cy + size, paint)
+            canvas.drawRect(left, top, right, bottom, paint)
+            // clear shadow after drawing current
+             if (i == weeksLived) paint.clearShadowLayer()
         }
-        
+
         return bitmap
-    }
-    
-    private fun minOf(a: Float, b: Float): Float {
-        return if (a < b) a else b
     }
 }
