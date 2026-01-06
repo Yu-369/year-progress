@@ -13,6 +13,10 @@
   "dependencies": {
     "@capacitor/android": "^5.5.1",
     "@capacitor/core": "^5.5.1",
+    "@capacitor/filesystem": "^8.0.0",
+    "@capacitor/geolocation": "^8.0.0",
+    "@capacitor/preferences": "^8.0.0",
+    "@capacitor/share": "^8.0.0",
     "framer-motion": "^10.16.4",
     "html2canvas": "^1.4.1",
     "react": "^18.2.0",

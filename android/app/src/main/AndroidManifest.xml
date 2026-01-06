@@ -33,17 +33,56 @@
                 android:resource="@xml/file_paths" />
         </provider>
 
-        <!-- Year Progress Widget -->
+        <!-- 1. Entropy Grid -->
         <receiver
-            android:name=".YearProgressWidget"
+            android:name=".widgets.EntropyWidget"
             android:exported="true"
-            android:label="Year Progress">
+            android:label="Entropy Grid">
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
             </intent-filter>
             <meta-data
                 android:name="android.appwidget.provider"
-                android:resource="@xml/widget_info" />
+                android:resource="@xml/widget_entropy_info" />
+        </receiver>
+
+        <!-- 2. Solar Orbit -->
+        <receiver
+            android:name=".widgets.OrbitWidget"
+            android:exported="true"
+            android:label="Solar Orbit">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_orbit_info" />
+        </receiver>
+
+        <!-- 3. Precise Pulse -->
+        <receiver
+            android:name=".widgets.PulseWidget"
+            android:exported="true"
+            android:label="Precise Pulse">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_pulse_info" />
+        </receiver>
+
+        <!-- 4. Ghost of 80 -->
+        <receiver
+            android:name=".widgets.GhostWidget"
+            android:exported="true"
+            android:label="Ghost of 80">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/widget_ghost_info" />
         </receiver>
 
     </application>
