@@ -7,12 +7,67 @@
   <meta name="theme-color" content="#050505" />
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Year Progress</title>
+  <title>Orbit</title>
   <link rel="manifest" href="/manifest.json">
+  <style>
+    body {
+      background-color: #050505;
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .loader {
+      width: 80px;
+      aspect-ratio: 1;
+      /* FIX: Match border to body color (#050505) so filter works but box is invisible */
+      border: 10px solid #050505;
+      box-sizing: border-box;
+      background:
+        radial-gradient(farthest-side, #CCFF00 98%, #0000) top,
+        radial-gradient(farthest-side, #CCFF00 98%, #0000) top,
+        radial-gradient(farthest-side, #CCFF00 98%, #0000) left,
+        radial-gradient(farthest-side, #CCFF00 98%, #0000) right,
+        radial-gradient(farthest-side, #CCFF00 98%, #0000) bottom,
+        /* FIX: Match background to body color (#050505) to sharpen the blur */
+        #050505;
+      background-size: 20px 20px;
+      background-repeat: no-repeat;
+      filter: blur(4px) contrast(10);
+      transform: rotate(45deg);
+      animation: l19 2s infinite;
+    }
+
+    @keyframes l19 {
+      0% {
+        background-position: top, top, left, right, bottom
+      }
+
+      25% {
+        background-position: right, top, left, right, bottom
+      }
+
+      50% {
+        background-position: bottom, top, left, right, bottom
+      }
+
+      75% {
+        background-position: left, top, left, right, bottom
+      }
+
+      100% {
+        background-position: top, top, left, right, bottom
+      }
+    }
+  </style>
 </head>
 
 <body>
-  <div id="root"></div>
+  <div id="root">
+    <div class="loader"></div>
+  </div>
   <script type="module" src="/index.tsx"></script>
 </body>
 

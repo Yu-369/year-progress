@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Year Progress</string>
-    <string name="title_activity_main">Year Progress</string>
+    <string name="app_name">Orbit</string>
+    <string name="title_activity_main">Orbit</string>
     <string name="package_name">com.yearprogress.app</string>
     <string name="custom_url_scheme">com.yearprogress.app</string>
     <string name="widget_description">Shows the percentage of the current year that has passed</string>

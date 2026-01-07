@@ -1,7 +1,6 @@
-
 {
   "appId": "com.yearprogress.app",
-  "appName": "Year Progress",
+  "appName": "Orbit",
   "webDir": "dist",
   "server": {
     "androidScheme": "https"

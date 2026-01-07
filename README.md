@@ -1,79 +1,78 @@
-# Year Progress
+# Orbit
 
-A React application tracking year progress, available as a Web App and Android App.
+> A visceral visualization of time.
 
-## Prerequisites
+![Year Progress Banner](public/logo.svg)
 
--   **Node.js**: v18+ recommended (v20 used in CI).
--   **Java JDK**: v17 (Required for Android build).
--   **Android Studio**: For local Android development and SDK management.
+**Year Progress** is a minimalist Android application built to remind you of the passage of time. It combines high-contrast data visualization with ambient Android home screen widgets to keep you grounded in the present moment.
 
-## Project Structure
+## Features
 
--   `src/` - React application source code (located in root).
--   `android/` - Android project (Capacitor).
--   `dist/` - Compiled web assets (generated).
--   `components/` - React components.
+*   **365-Day Grid**: A complete visualization of the current year. Days lived are filled; the future is void.
+*   **Ambient Data Widgets**: four "Ultra" widgets designed for your home screen.
+    *   **The Entropy Grid (4x4)**: A raw 19x20 grid of your year.
+    *   **The Solar Orbit (2x2)**: A celestial circular progress indicator.
+    *   **The Precise Pulse (4x1)**: A text-based percentage display (e.g., `45.12%`).
+    *   **The Ghost of 80 (2x2)**: A 'Memento Mori' grid of your assumed 80-year lifespan.
+*   **Privacy First**: All data (birth date, gender) is stored locally on your device.
+*   **Native Export**: Share a high-resolution snapshot of your year directly to Instagram/Twitter.
+*   **Haptic Feedback**: Meaningful vibrations for every interaction.
+
+## Tech Stack
+
+*   **Frontend**: React, Vite, TypeScript
+*   **Styling**: Tailwind CSS, Framer Motion
+*   **Mobile Engine**: Capacitor 5
+*   **Native Android**: Kotlin (Widgets, File System, Permissions)
 
 ## Getting Started
 
-1.  **Install Dependencies:**
+### Prerequisites
+*   Node.js (v18+)
+*   Android Studio (for building the APK)
+
+### Installation
+
+1.  **Clone the repository**
+    ```bash
+    git clone https://github.com/Yu-369/year-progress.git
+    cd year-progress
+    ```
+
+2.  **Install Dependencies**
     ```bash
     npm install
     ```
 
-2.  **Run Development Server:**
+3.  **Run Web Development Server**
     ```bash
     npm run dev
     ```
 
-## Building for Web
-
-To build the production web assets:
-
-```bash
-npm run build
-```
-
-Assets will be generated in the `dist` directory.
-
-## Building for Android
-
-1.  **Sync Web Assets:**
-    Ensure you have built the web app first.
+4.  **Sync with Android**
     ```bash
     npm run build
-    npx cap sync android
+    npx cap sync
     ```
 
-2.  **Build APK:**
-    
-    *Mac/Linux:*
+5.  **Open in Android Studio**
+    ```bash
+    npx cap open android
+    ```
+    Alternatively, build the APK directly:
     ```bash
     cd android
     ./gradlew assembleDebug
     ```
-    
-    *Windows:*
-    ```bash
-    cd android
-    .\gradlew.bat assembleDebug
-    ```
 
-    The APK will be located at:  
-    `android/app/build/outputs/apk/debug/app-debug.apk`
+## Widgets
 
-3.  **Run in Android Studio:**
-    ```bash
-    npx cap open android
-    ```
+To add widgets:
+1.  Long press your Android Home Screen.
+2.  Select **Widgets**.
+3.  Scroll to **Year Progress**.
+4.  Drag and drop one of the 4 available widgets.
 
-## Development Notes
+## License
 
--   **Styling:** Uses Tailwind CSS.
--   **Widget:** Includes a custom Android Widget written in Kotlin (`YearProgressWidget.kt`).
-
-## Troubleshooting
-
--   **"index.css not found"**: This file is not required; ensure `index.html` does not reference it.
--   **"Java not found"**: Ensure `JAVA_HOME` is set to a valid JDK 17 installation.
+MIT License.
