@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="AppTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
+        <item name="colorPrimary">#1A1A1F</item>
+        <item name="colorPrimaryDark">#0F0F12</item>
+        <item name="colorAccent">#80CAFF</item>
+        <item name="android:windowBackground">#0F0F12</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="colorPrimary">#1A1A1F</item>
+        <item name="colorPrimaryDark">#0F0F12</item>
+        <item name="colorAccent">#80CAFF</item>
+        <item name="android:windowBackground">#0F0F12</item>
+    </style>
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">#0F0F12</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="postSplashScreenTheme">@style/AppTheme.NoActionBar</item>
+    </style>
+</resources>
