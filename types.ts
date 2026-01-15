@@ -19,7 +19,6 @@ export interface DeadlineEvent {
   title: string;
   createdAt: number;
 }
-
 export interface YearData {
   year: number;
   totalDays: number;

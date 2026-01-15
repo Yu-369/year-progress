@@ -90,7 +90,6 @@ export const YearGrid: React.FC<YearGridProps> = ({
 
     // Deadline (Priority over past logs for visibility, but typically future)
     if (isDeadline) return { bg: 'bg-[#FF00FF]', border: 'border-transparent', shadow: 'deadline-pulse' };
-
     // Past with Log
     if (day.isPast && log) {
       if (log.impact === 'HIGH') return { bg: 'bg-acid', border: 'border-acid', shadow: 'shadow-[0_0_8px_#CCFF00]' };

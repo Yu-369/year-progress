@@ -58,13 +58,31 @@ const usePreciseProgress = (totalDays: number) => {
     return percentage;
 }
 
+const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => {
+    const percentage = usePreciseProgress(totalDays);
+    return (
+        <div className="flex flex-col items-center opacity-30 font-mono text-[9px] tracking-widest gap-1">
+            <span>PRECISE ORBIT SYNC</span>
+            <span className="text-acid">{percentage}%</span>
+        </div>
+    );
+};
+
+const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, suffix }) => {
+    return (
+        <div className="flex items-baseline">
+            <span className="text-4xl font-display font-bold text-white tracking-tighter">{value}</span>
+            <span className="text-sm font-mono text-acid ml-1">{suffix}</span>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
     // -- Data State --
     const [data, setData] = useState<YearData | null>(null);
     const [logs, setLogs] = useState<Record<string, DayLog>>({});
     const [deadline, setDeadline] = useState<DeadlineEvent | null>(null);
 
-    // -- User Settings State --
     // -- User Settings State --
     const [gender, setGender] = useState<Gender>('MALE');
     const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
@@ -99,8 +117,10 @@ const App: React.FC = () => {
     // Default to false for List view as requested
     const [isYearOverview, setIsYearOverview] = useState(false);
 
-    // ... (keep existing state) ...
+    const [mounted, setMounted] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
+    // -- Import Logic --
     const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0];
         if (!file) return;
@@ -140,12 +160,6 @@ const App: React.FC = () => {
         };
         reader.readAsText(file);
     };
-
-    // ... (rest of component) ...
-
-
-    const [mounted, setMounted] = useState(false);
-    const [isExporting, setIsExporting] = useState(false);
 
     // -- Swipe Handling --
     const touchStartX = useRef<number | null>(null);
@@ -770,26 +784,5 @@ const PercentageDisplay: React.FC<{ value: number }> = ({ value }) => {
         </div>
     );
 };
-
-const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, suffix }) => {
-    const animatedValue = useScrambleNumber(value, 1500, 2);
-    return (
-        <div className="flex items-baseline">
-            <span className="text-6xl font-display font-bold text-white tracking-tighter tabular-nums">
-                {animatedValue}
-            </span>
-            <span className="text-2xl font-display text-acid font-bold ml-1">{suffix}</span>
-        </div>
-    )
-}
-
-const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => {
-    const precise = usePreciseProgress(totalDays);
-    return (
-        <div className="text-xl font-display font-bold text-white/20 tabular-nums tracking-tighter">
-            {precise}%
-        </div>
-    )
-}
 
 export default App;

@@ -5,6 +5,9 @@ import android.content.SharedPreferences
 import java.util.Calendar
 import java.util.Date
 import org.json.JSONObject
+import java.text.SimpleDateFormat
+import java.util.TimeZone
+import java.util.Locale
 
 object WidgetHelper {
 
@@ -28,11 +31,9 @@ object WidgetHelper {
         
         if (birthDateStr != null) {
             try {
-                // Simple ISO parsing manually or via simple date format?
-                // java.time is available in SDK 26+ (User has 30+)
-                // But let's be safe.
-                val format = java.text.SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", java.util.Locale.US)
-                format.timeZone = java.util.TimeZone.getTimeZone("UTC")
+                // Safe ISO parsing
+                val format = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US)
+                format.timeZone = TimeZone.getTimeZone("UTC")
                 val date = format.parse(birthDateStr)
                 if (date != null) {
                     birthTime = date.time

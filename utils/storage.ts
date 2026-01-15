@@ -42,7 +42,6 @@ export const saveDeadline = (deadline: DeadlineEvent): void => {
 export const deleteDeadline = (): void => {
   localStorage.removeItem(DEADLINE_KEY);
 };
-
 // Helper to generate a consistent ID for dates (YYYY-MM-DD)
 export const getDateId = (date: Date): string => {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
