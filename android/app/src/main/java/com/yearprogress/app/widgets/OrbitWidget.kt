@@ -39,7 +39,7 @@ class OrbitWidget : AppWidgetProvider() {
 
         val views = RemoteViews(context.packageName, R.layout.widget_orbit)
         
-        val bitmap = drawOrbit(yearData.percentage)
+        val bitmap = drawOrbit(context, yearData.percentage)
         views.setImageViewBitmap(R.id.widget_orbit_canvas, bitmap)
 
         val intent = Intent(context, MainActivity::class.java)
@@ -54,7 +54,7 @@ class OrbitWidget : AppWidgetProvider() {
         appWidgetManager.updateAppWidget(appWidgetId, views)
     }
 
-    private fun drawOrbit(percentage: Double): Bitmap {
+    private fun drawOrbit(context: Context, percentage: Double): Bitmap {
         val size = 500
         val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
