@@ -1,7 +1,6 @@
-
 {
-  "name": "Year Progress",
-  "short_name": "Progress",
+  "name": "Orbit",
+  "short_name": "Orbit",
   "id": "com.yearprogress.app",
   "description": "A minimal, high-contrast visualization of time passing.",
   "start_url": "/",
@@ -9,7 +8,11 @@
   "background_color": "#050505",
   "theme_color": "#050505",
   "orientation": "portrait",
-  "categories": ["productivity", "utilities", "lifestyle"],
+  "categories": [
+    "productivity",
+    "utilities",
+    "lifestyle"
+  ],
   "icons": [
     {
       "src": "https://raw.githubusercontent.com/google/material-design-icons/master/png/action/schedule/materialicons/24dp/2x/baseline_schedule_white_24dp.png",

@@ -88,12 +88,19 @@ class GhostWidget : AppWidgetProvider() {
         val weeksPassed = (diff / (1000L * 60 * 60 * 24 * 7)).toInt()
         val totalWeeks = rows * cols
 
+        // CENTERING LOGIC
+        val gridWidth = cols * size + (cols - 1) * gap
+        val gridHeight = rows * size + (rows - 1) * gap
+
+        val offsetX = (width - gridWidth) / 2f
+        val offsetY = (height - gridHeight) / 2f
+
         for (i in 0 until totalWeeks) {
             val col = i % cols
             val row = i / cols
             
-            val cx = margin + col * (size + gap)
-            val cy = margin + row * (size + gap)
+            val cx = offsetX + col * (size + gap)
+            val cy = offsetY + row * (size + gap)
             
             if (i < weeksPassed) {
                 paint.color = livedColor

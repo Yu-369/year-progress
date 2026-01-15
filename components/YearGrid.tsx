@@ -89,7 +89,7 @@ export const YearGrid: React.FC<YearGridProps> = ({
     if (day.isToday) return { bg: 'bg-acid', border: 'border-transparent', shadow: 'shadow-[0_0_10px_#CCFF00]' };
 
     // Deadline (Priority over past logs for visibility, but typically future)
-    if (isDeadline) return { bg: 'bg-[#FF00FF]', border: 'border-transparent', shadow: 'deadline-pulse' };
+    if (isDeadline) return { bg: 'bg-red-500', border: 'border-transparent', shadow: 'deadline-pulse' };
 
     // Past with Log
     if (day.isPast && log) {
@@ -172,14 +172,7 @@ export const YearGrid: React.FC<YearGridProps> = ({
               onMouseEnter={() => { if (!isOverview && lastVibratedIndex.current !== index) { lastVibratedIndex.current = index; triggerHaptic('tick'); onHoverDay(day); } }}
               onClick={(e) => {
                 e.stopPropagation();
-                // If it's a future day but NOT the deadline, we might still want to select it to set a deadline?
-                // Current logic prevents selecting future days.
-                // We will relax this rule if the user wants to set a deadline on a future day via the modal?
-                // For now, keep selection logic as is - deadline is set via Global Menu
-                if (day.isFuture) {
-                  triggerHaptic('tick');
-                  return;
-                }
+                // Allow clicking future days to set deadline
                 triggerHaptic('heavy');
                 onSelectDay(day);
               }}

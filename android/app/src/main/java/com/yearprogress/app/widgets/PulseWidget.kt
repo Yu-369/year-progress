@@ -63,13 +63,8 @@ class PulseWidget : AppWidgetProvider() {
         paint.textSize = 90f
         paint.textAlign = Paint.Align.CENTER
         
-        // Try to load custom font, fallback to standard
-        try {
-            val typeface = Typeface.createFromAsset(context.assets, "public/fonts/SpaceGrotesk-Variable.woff2")
-            paint.typeface = typeface
-        } catch (e: Exception) {
-            paint.typeface = Typeface.MONOSPACE
-        }
+        // Use standard Monospace for "Precise" digital look as requested
+        paint.typeface = Typeface.MONOSPACE
 
         val cx = width / 2f
         val cy = height / 2f

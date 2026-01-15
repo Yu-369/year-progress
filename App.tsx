@@ -71,8 +71,8 @@ const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => 
 const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, suffix }) => {
     return (
         <div className="flex items-baseline">
-            <span className="text-4xl font-display font-bold text-white tracking-tighter">{value}</span>
-            <span className="text-sm font-mono text-acid ml-1">{suffix}</span>
+            <span className="text-6xl font-display font-bold text-white tracking-tighter">{value}</span>
+            <span className="text-xl font-mono text-acid ml-1">{suffix}</span>
         </div>
     );
 };
@@ -188,10 +188,29 @@ const App: React.FC = () => {
     };
 
     const handleSelectDay = (day: DayData) => {
-        if (!day.isFuture) {
-            setSelectedDay(day);
-            setHoveredDay(null);
+        // Future Day -> Set Deadline
+        if (day.isFuture) {
+            // Toggle Logic: If clicking the same day, clear it. If new day, set it.
+            if (deadline?.date === getDateId(day.date)) {
+                setDeadline(null);
+                deleteDeadline();
+                triggerHaptic('tick');
+            } else {
+                const newDeadline: DeadlineEvent = {
+                    date: getDateId(day.date),
+                    title: "Focus Target",
+                    createdAt: Date.now()
+                };
+                setDeadline(newDeadline);
+                saveDeadline(newDeadline);
+                triggerHaptic('heavy');
+            }
+            return;
         }
+
+        // Past/Present -> Open Detail Modal
+        setSelectedDay(day);
+        setHoveredDay(null);
     };
 
     const handleSaveLog = (log: DayLog) => {
@@ -507,42 +526,7 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 3. Deadline Config */}
-                    <div className="mt-8">
-                        <div className="flex justify-between items-baseline mb-4">
-                            <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Target Event</span>
-                            {deadline && (
-                                <button onClick={handleClearDeadline} className="text-[9px] text-red-500 uppercase tracking-widest hover:text-red-400">Clear</button>
-                            )}
-                        </div>
 
-                        <div className="relative group w-full cursor-pointer">
-                            {/* Visual Layer */}
-                            <div className={`
-                                    flex items-center justify-center py-4 bg-[#111] border rounded-xl overflow-hidden transition-all duration-300 
-                                    ${deadline
-                                    ? 'border-magenta/50 shadow-[0_0_15px_rgba(255,0,255,0.1)]'
-                                    : 'border-white/10 group-hover:border-white/30'}
-                                `}>
-                                {deadline ? (
-                                    <div className="flex flex-col items-center">
-                                        <span className="text-xl font-display font-bold text-[#FF00FF] tracking-tight">{deadline.date}</span>
-                                        <span className="text-[9px] font-mono text-white/30 uppercase mt-1">Focus Mode Active</span>
-                                    </div>
-                                ) : (
-                                    <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest group-hover:text-white/60">Set Deadline</span>
-                                )}
-                            </div>
-
-                            {/* Interaction Layer (Native Input) */}
-                            <input
-                                type="date"
-                                onChange={handleSetDeadline}
-                                onClick={() => triggerHaptic('light')}
-                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
-                            />
-                        </div>
-                    </div>
 
                     {/* 4. Actions */}
                     <div className="mt-auto pt-8 flex flex-col gap-3">
