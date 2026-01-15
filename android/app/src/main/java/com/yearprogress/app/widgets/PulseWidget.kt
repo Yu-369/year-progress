@@ -64,9 +64,13 @@ class PulseWidget : AppWidgetProvider() {
         paint.color = acidGreen
         paint.textSize = 90f
         paint.textAlign = Paint.Align.CENTER
-        
-        // Use SANS_SERIF to match app's display font aesthetic
-        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        // Use Space Grotesk from assets
+        try {
+            val typeface = Typeface.createFromAsset(context.assets, "public/fonts/SpaceGrotesk-Variable.woff2")
+            paint.typeface = typeface // Use the variable font directly
+        } catch (e: Exception) {
+            paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
+        }
 
         val cx = width / 2f
         val cy = height / 2f
@@ -79,7 +83,12 @@ class PulseWidget : AppWidgetProvider() {
         // Draw Label
         paint.textSize = 30f
         paint.color = Color.parseColor("#66FFFFFF")
-        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        try {
+             val typeface = Typeface.createFromAsset(context.assets, "public/fonts/SpaceGrotesk-Variable.woff2")
+             paint.typeface = typeface
+        } catch (e: Exception) {
+             paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
+        }
         paint.letterSpacing = 0.2f
         canvas.drawText("YEAR COMPLETED", cx, cy + 60f, paint)
 

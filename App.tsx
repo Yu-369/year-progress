@@ -429,40 +429,16 @@ const App: React.FC = () => {
                 </div>
             )}
 
-            {/* -- DAY DETAIL MODAL (for PAST/TODAY days only) -- */}
-            {selectedDay && !selectedDay.isFuture && (
+            {/* -- DAY DETAIL MODAL -- */}
+            {selectedDay && (
                 <DayDetailModal
                     day={selectedDay}
                     existingLog={logs[getDateId(selectedDay.date)]}
                     onClose={() => setSelectedDay(null)}
-                    onSave={handleSaveLog}
-                    onDelete={handleDeleteLog}
+                    onSave={!selectedDay.isFuture ? handleSaveLog : undefined}
+                    onDelete={!selectedDay.isFuture ? handleDeleteLog : undefined}
+                    onSetDeadline={selectedDay.isFuture ? handleConfirmDeadline : undefined}
                 />
-            )}
-
-            {/* -- FUTURE DAY ADD DEADLINE MODAL -- */}
-            {selectedDay && selectedDay.isFuture && (
-                <div
-                    className="fixed inset-0 z-[70] bg-black/70 backdrop-blur-sm flex items-center justify-center"
-                    onClick={() => setSelectedDay(null)}
-                >
-                    <div
-                        className="flex flex-col items-center gap-6 p-8 bg-void/90 border border-white/10 rounded-2xl"
-                        onClick={(e) => e.stopPropagation()}
-                    >
-                        <span className="text-lg font-display text-white">{formatDate(selectedDay.date)}</span>
-                        <span className="text-xs text-white/50 uppercase tracking-widest">Set as Deadline?</span>
-                        <button
-                            onClick={handleConfirmDeadline}
-                            className="w-16 h-16 rounded-full bg-red-500 flex items-center justify-center shadow-[0_0_20px_rgba(255,0,0,0.5)] hover:scale-110 transition-transform active:scale-95"
-                        >
-                            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                                <line x1="12" y1="5" x2="12" y2="19" />
-                                <line x1="5" y1="12" x2="19" y2="12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
             )}
 
             {/* -- SIDEBAR MENU (LEFT DRAWER) -- */}
