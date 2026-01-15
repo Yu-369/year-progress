@@ -1,12 +1,20 @@
 
 import React, { useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
+<<<<<<< HEAD
+import { DayData, YearData, DayLog, DeadlineEvent } from '../types';
+=======
 import { DayData, YearData, DayLog } from '../types';
+>>>>>>> origin/main
 import { getDateId } from '../utils/storage';
 
 interface YearGridProps {
   data: YearData;
   logs: Record<string, DayLog>;
+<<<<<<< HEAD
+  deadline: DeadlineEvent | null;
+=======
+>>>>>>> origin/main
   hoveredDay: DayData | null;
   selectedDay: DayData | null;
   isOverview: boolean;
@@ -18,6 +26,10 @@ interface YearGridProps {
 export const YearGrid: React.FC<YearGridProps> = ({
   data,
   logs,
+<<<<<<< HEAD
+  deadline,
+=======
+>>>>>>> origin/main
   hoveredDay,
   selectedDay,
   isOverview,
@@ -80,10 +92,21 @@ export const YearGrid: React.FC<YearGridProps> = ({
 
   const getDayColor = (day: DayData, isActive: boolean) => {
     const log = logs[getDateId(day.date)];
+<<<<<<< HEAD
+    const dateId = getDateId(day.date);
+    const isDeadline = deadline?.date === dateId;
+=======
+>>>>>>> origin/main
 
     // Today
     if (day.isToday) return { bg: 'bg-acid', border: 'border-transparent', shadow: 'shadow-[0_0_10px_#CCFF00]' };
 
+<<<<<<< HEAD
+    // Deadline (Priority over past logs for visibility, but typically future)
+    if (isDeadline) return { bg: 'bg-[#FF00FF]', border: 'border-transparent', shadow: 'deadline-pulse' };
+
+=======
+>>>>>>> origin/main
     // Past with Log
     if (day.isPast && log) {
       if (log.impact === 'HIGH') return { bg: 'bg-acid', border: 'border-acid', shadow: 'shadow-[0_0_8px_#CCFF00]' };
@@ -156,7 +179,11 @@ export const YearGrid: React.FC<YearGridProps> = ({
           const style = getDayColor(day, isSelected || isHovered);
 
           // Uniform dot sizing logic for both views as requested
+<<<<<<< HEAD
+          const dotSize = (day.isToday || isSelected || style.shadow === 'deadline-pulse') ? 'w-3 h-3' : 'w-2 h-2';
+=======
           const dotSize = (day.isToday || isSelected) ? 'w-3 h-3' : 'w-2 h-2';
+>>>>>>> origin/main
 
           return (
             <motion.div
@@ -165,6 +192,13 @@ export const YearGrid: React.FC<YearGridProps> = ({
               onMouseEnter={() => { if (!isOverview && lastVibratedIndex.current !== index) { lastVibratedIndex.current = index; triggerHaptic('tick'); onHoverDay(day); } }}
               onClick={(e) => {
                 e.stopPropagation();
+<<<<<<< HEAD
+                // If it's a future day but NOT the deadline, we might still want to select it to set a deadline?
+                // Current logic prevents selecting future days.
+                // We will relax this rule if the user wants to set a deadline on a future day via the modal?
+                // For now, keep selection logic as is - deadline is set via Global Menu
+=======
+>>>>>>> origin/main
                 if (day.isFuture) {
                   triggerHaptic('tick');
                   return;

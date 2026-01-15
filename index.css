@@ -2,6 +2,24 @@
 @tailwind components;
 @tailwind utilities;
 
+<<<<<<< HEAD
+@keyframes deadline-pulse {
+  0%, 100% { 
+    box-shadow: 0 0 8px rgba(255, 0, 255, 0.8); 
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 0 20px rgba(255, 0, 255, 1); 
+    transform: scale(1.15);
+  }
+}
+
+.deadline-pulse {
+  animation: deadline-pulse 2s ease-in-out infinite;
+}
+
+=======
+>>>>>>> origin/main
 @font-face {
   font-family: 'Inter';
   src: url('/fonts/Inter-Regular.woff2') format('woff2');

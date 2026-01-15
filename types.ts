@@ -14,6 +14,15 @@ export interface DayLog {
   timestamp: number;
 }
 
+<<<<<<< HEAD
+export interface DeadlineEvent {
+  date: string; // ISO date string (YYYY-MM-DD)
+  title: string;
+  createdAt: number;
+}
+
+=======
+>>>>>>> origin/main
 export interface YearData {
   year: number;
   totalDays: number;
@@ -37,7 +46,11 @@ export interface UserSettings {
 }
 
 export interface LifeWeek {
+<<<<<<< HEAD
+  weekIndex: number;
+=======
   weekIndex: number; 
+>>>>>>> origin/main
   yearIndex: number;
   isPast: boolean;
   isCurrent: boolean;

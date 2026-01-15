@@ -9,8 +9,8 @@ import { Capacitor } from '@capacitor/core';
 import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateYearData, formatDate } from './utils/dateHelper';
-import { getLogs, saveLog, deleteLog, getDateId } from './utils/storage';
-import { YearData, DayData, ViewMode, Gender, DayLog } from './types';
+import { getLogs, saveLog, deleteLog, getDateId, getDeadline, saveDeadline, deleteDeadline } from './utils/storage';
+import { YearData, DayData, ViewMode, Gender, DayLog, DeadlineEvent } from './types';
 import { StatsHeader } from './components/StatsHeader';
 import { YearGrid } from './components/YearGrid';
 import { DayPulse } from './components/DayPulse';
@@ -58,12 +58,31 @@ const usePreciseProgress = (totalDays: number) => {
     return percentage;
 }
 
+const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => {
+    const percentage = usePreciseProgress(totalDays);
+    return (
+        <div className="flex flex-col items-center opacity-30 font-mono text-[9px] tracking-widest gap-1">
+            <span>PRECISE ORBIT SYNC</span>
+            <span className="text-acid">{percentage}%</span>
+        </div>
+    );
+};
+
+const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, suffix }) => {
+    return (
+        <div className="flex items-baseline">
+            <span className="text-4xl font-display font-bold text-white tracking-tighter">{value}</span>
+            <span className="text-sm font-mono text-acid ml-1">{suffix}</span>
+        </div>
+    );
+};
+
 const App: React.FC = () => {
     // -- Data State --
     const [data, setData] = useState<YearData | null>(null);
     const [logs, setLogs] = useState<Record<string, DayLog>>({});
+    const [deadline, setDeadline] = useState<DeadlineEvent | null>(null);
 
-    // -- User Settings State --
     // -- User Settings State --
     const [gender, setGender] = useState<Gender>('MALE');
     const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
@@ -95,10 +114,52 @@ const App: React.FC = () => {
     const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [currentView, setCurrentView] = useState<ViewMode>(ViewMode.MESO);
-    // Default to true for the 15-col grid view
-    const [isYearOverview, setIsYearOverview] = useState(true);
+    // Default to false for List view as requested
+    const [isYearOverview, setIsYearOverview] = useState(false);
+
     const [mounted, setMounted] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+
+    // -- Import Logic --
+    const handleImportJSON = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const json = JSON.parse(event.target?.result as string);
+
+                // Validate Basic Structure
+                if (json.logs) setLogs(json.logs);
+
+                if (json.deadline) {
+                    setDeadline(json.deadline);
+                    saveDeadline(json.deadline);
+                }
+
+                if (json.birthDate) {
+                    const newDate = new Date(json.birthDate);
+                    setBirthDate(newDate);
+                    await Preferences.set({ key: 'birthDate', value: newDate.toISOString() });
+                }
+
+                if (json.gender) {
+                    setGender(json.gender);
+                    await Preferences.set({ key: 'gender', value: json.gender });
+                }
+
+                triggerHaptic('heavy');
+                alert("Data Imported Successfully. Welcome back.");
+                window.location.reload(); // Refresh to ensure all states sync cleanly
+
+            } catch (err) {
+                console.error("Import Failed", err);
+                alert("Corrupt Time Stream. Import Failed.");
+            }
+        };
+        reader.readAsText(file);
+    };
 
     // -- Swipe Handling --
     const touchStartX = useRef<number | null>(null);
@@ -107,6 +168,7 @@ const App: React.FC = () => {
     useEffect(() => {
         setData(generateYearData());
         setLogs(getLogs()); // Load saved logs
+        setDeadline(getDeadline()); // Load saved deadline
         setMounted(true);
         const interval = setInterval(() => setData(generateYearData()), 60000);
         return () => clearInterval(interval);
@@ -209,6 +271,37 @@ const App: React.FC = () => {
         setGender(g);
         triggerHaptic('tick');
         await Preferences.set({ key: 'gender', value: g });
+    };
+
+    // -- Deadline Handling --
+    const handleSetDeadline = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        if (!val) return;
+
+        // Check if future
+        const [y, m, d] = val.split('-').map(Number);
+        const date = new Date(y, m - 1, d);
+
+        if (date <= new Date()) {
+            alert("Memento Mori. Set a deadline in the future.");
+            return;
+        }
+
+        const newDeadline: DeadlineEvent = {
+            date: val, // Keep YYYY-MM-DD
+            title: "Project Finish", // Default or could expand to modal input later
+            createdAt: Date.now()
+        };
+
+        setDeadline(newDeadline);
+        saveDeadline(newDeadline);
+        triggerHaptic('heavy');
+    };
+
+    const handleClearDeadline = () => {
+        setDeadline(null);
+        deleteDeadline();
+        triggerHaptic('tick');
     };
 
     // -- SWIPE LOGIC --
@@ -314,7 +407,7 @@ const App: React.FC = () => {
                     </div>
                     <div className="flex-1 w-full flex items-center justify-center my-12 scale-150">
                         <YearGrid
-                            data={data} logs={logs} hoveredDay={null} selectedDay={null} isOverview={true}
+                            data={data} logs={logs} deadline={deadline} hoveredDay={null} selectedDay={null} isOverview={true}
                             onHoverDay={() => { }} onSelectDay={() => { }} onToggleOverview={() => { }}
                         />
                     </div>
@@ -344,7 +437,7 @@ const App: React.FC = () => {
             transition-transform duration-500 ease-[cubic-bezier(0.19,1,0.22,1)] flex flex-col
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e: React.MouseEvent) => e.stopPropagation()}
             >
                 <div className="flex-1 overflow-y-auto p-8 pt-24 flex flex-col no-scrollbar">
                     {/* Header */}
@@ -414,7 +507,44 @@ const App: React.FC = () => {
                         </div>
                     </div>
 
-                    {/* 3. Actions */}
+                    {/* 3. Deadline Config */}
+                    <div className="mt-8">
+                        <div className="flex justify-between items-baseline mb-4">
+                            <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Target Event</span>
+                            {deadline && (
+                                <button onClick={handleClearDeadline} className="text-[9px] text-red-500 uppercase tracking-widest hover:text-red-400">Clear</button>
+                            )}
+                        </div>
+
+                        <div className="relative group w-full cursor-pointer">
+                            {/* Visual Layer */}
+                            <div className={`
+                                    flex items-center justify-center py-4 bg-[#111] border rounded-xl overflow-hidden transition-all duration-300 
+                                    ${deadline
+                                    ? 'border-magenta/50 shadow-[0_0_15px_rgba(255,0,255,0.1)]'
+                                    : 'border-white/10 group-hover:border-white/30'}
+                                `}>
+                                {deadline ? (
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-xl font-display font-bold text-[#FF00FF] tracking-tight">{deadline.date}</span>
+                                        <span className="text-[9px] font-mono text-white/30 uppercase mt-1">Focus Mode Active</span>
+                                    </div>
+                                ) : (
+                                    <span className="text-[10px] font-mono text-white/30 uppercase tracking-widest group-hover:text-white/60">Set Deadline</span>
+                                )}
+                            </div>
+
+                            {/* Interaction Layer (Native Input) */}
+                            <input
+                                type="date"
+                                onChange={handleSetDeadline}
+                                onClick={() => triggerHaptic('light')}
+                                className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-20"
+                            />
+                        </div>
+                    </div>
+
+                    {/* 4. Actions */}
                     <div className="mt-auto pt-8 flex flex-col gap-3">
                         <button
                             onClick={handleExportVisual}
@@ -427,22 +557,46 @@ const App: React.FC = () => {
                             <span className="text-[10px] font-mono uppercase tracking-widest">{isExporting ? 'Processing...' : 'Export Visual'}</span>
                         </button>
 
-                        <button
-                            onClick={() => {
-                                triggerHaptic('tick');
-                                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(logs, null, 2));
-                                const anchor = document.createElement('a');
-                                anchor.href = dataStr;
-                                anchor.download = "year_log_backup.json";
-                                anchor.click();
-                            }}
-                            className="w-full py-4 flex items-center justify-center gap-3 rounded-xl border border-white/10 hover:bg-white/5 text-white transition-all active:scale-95 group"
-                        >
-                            <div className="p-1 rounded bg-white/5 group-hover:bg-white/10 transition-colors">
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                        {/* Import / Export Group */}
+                        <div className="flex gap-2">
+                            {/* Backup JSON */}
+                            <button
+                                onClick={() => {
+                                    triggerHaptic('tick');
+                                    const exportData = {
+                                        logs,
+                                        deadline,
+                                        birthDate: birthDate.toISOString(),
+                                        gender
+                                    };
+                                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+                                    const anchor = document.createElement('a');
+                                    anchor.href = dataStr;
+                                    anchor.download = "year_progress_backup.json";
+                                    anchor.click();
+                                }}
+                                className="flex-1 py-4 flex items-center justify-center gap-2 rounded-xl border border-white/10 hover:bg-white/5 text-white transition-all active:scale-95 group"
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="7 10 12 15 17 10" /><line x1="12" y1="15" x2="12" y2="3" /></svg>
+                                <span className="text-[10px] font-mono uppercase tracking-widest">Backup</span>
+                            </button>
+
+                            {/* Import JSON */}
+                            <div className="flex-1 relative">
+                                <input
+                                    type="file"
+                                    accept=".json"
+                                    onChange={handleImportJSON}
+                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
+                                />
+                                <button
+                                    className="w-full h-full py-4 flex items-center justify-center gap-2 rounded-xl border border-white/10 hover:bg-white/5 text-white transition-all active:scale-95 group"
+                                >
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
+                                    <span className="text-[10px] font-mono uppercase tracking-widest">Import</span>
+                                </button>
                             </div>
-                            <span className="text-[10px] font-mono uppercase tracking-widest">Backup JSON</span>
-                        </button>
+                        </div>
                     </div>
 
                     <div className="pt-8 border-t border-white/5">
@@ -511,6 +665,7 @@ const App: React.FC = () => {
                             <YearGrid
                                 data={data}
                                 logs={logs}
+                                deadline={deadline}
                                 hoveredDay={hoveredDay}
                                 selectedDay={selectedDay}
                                 isOverview={isYearOverview}
@@ -629,26 +784,5 @@ const PercentageDisplay: React.FC<{ value: number }> = ({ value }) => {
         </div>
     );
 };
-
-const MacroStatDisplay: React.FC<{ value: number, suffix: string }> = ({ value, suffix }) => {
-    const animatedValue = useScrambleNumber(value, 1500, 2);
-    return (
-        <div className="flex items-baseline">
-            <span className="text-6xl font-display font-bold text-white tracking-tighter tabular-nums">
-                {animatedValue}
-            </span>
-            <span className="text-2xl font-display text-acid font-bold ml-1">{suffix}</span>
-        </div>
-    )
-}
-
-const PreciseTimerDisplay: React.FC<{ totalDays: number }> = ({ totalDays }) => {
-    const precise = usePreciseProgress(totalDays);
-    return (
-        <div className="text-xl font-display font-bold text-white/20 tabular-nums tracking-tighter">
-            {precise}%
-        </div>
-    )
-}
 
 export default App;
