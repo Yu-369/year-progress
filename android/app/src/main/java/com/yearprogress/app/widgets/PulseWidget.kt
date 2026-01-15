@@ -58,30 +58,28 @@ class PulseWidget : AppWidgetProvider() {
         val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
 
+        val acidGreen = Color.parseColor("#CCFF00")
+
         val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-        paint.color = Color.WHITE
+        paint.color = acidGreen
         paint.textSize = 90f
         paint.textAlign = Paint.Align.CENTER
         
-        // Use standard Monospace for "Precise" digital look as requested
-        paint.typeface = Typeface.MONOSPACE
+        // Use SANS_SERIF to match app's display font aesthetic
+        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
 
         val cx = width / 2f
         val cy = height / 2f
         
-        // Draws: 12.45%
-        // Two decimal places as requested
         val text = String.format("%.2f%%", percentage)
         
-        // Draw Main Text
-        // Center vertically: descent + ascent is height of font
         val offset = (paint.descent() + paint.ascent()) / 2
         canvas.drawText(text, cx, cy - offset - 20f, paint)
 
         // Draw Label
         paint.textSize = 30f
         paint.color = Color.parseColor("#66FFFFFF")
-        paint.typeface = Typeface.MONOSPACE
+        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         paint.letterSpacing = 0.2f
         canvas.drawText("YEAR COMPLETED", cx, cy + 60f, paint)
 

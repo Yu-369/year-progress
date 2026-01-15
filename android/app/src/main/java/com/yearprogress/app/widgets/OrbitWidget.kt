@@ -91,10 +91,10 @@ class OrbitWidget : AppWidgetProvider() {
 
         // Draw Percentage Text in Center
         paint.alpha = 255
-        paint.color = Color.WHITE
+        paint.color = Color.parseColor("#CCFF00") // Acid green to match app
         paint.textSize = 50f
         paint.textAlign = Paint.Align.CENTER
-        paint.typeface = Typeface.MONOSPACE
+        paint.typeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         
         val text = String.format("%.0f%%", percentage)
         val textOffset = (paint.descent() + paint.ascent()) / 2

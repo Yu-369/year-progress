@@ -61,13 +61,13 @@ class GhostWidget : AppWidgetProvider() {
         val cols = 52
         val rows = 80
         
-        val margin = 20f
+        val margin = 8f
         val availableWidth = width - (margin * 2)
         val availableHeight = height - (margin * 2)
         
         // Calculate gap and dot size.
         // Since we have many rows, dots must be small.
-        val gap = 4f
+        val gap = 2f
         val dotWidth = (availableWidth - (gap * (cols - 1))) / cols
         val dotHeight = (availableHeight - (gap * (rows - 1))) / rows
         
