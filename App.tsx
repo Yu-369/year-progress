@@ -10,7 +10,7 @@ import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { generateYearData, formatDate } from './utils/dateHelper';
 import { getLogs, saveLog, deleteLog, getDateId, getDeadline, saveDeadline, deleteDeadline } from './utils/storage';
-import { YearData, DayData, ViewMode, Gender, DayLog, DeadlineEvent } from './types';
+import { YearData, DayData, ViewMode, Gender, DayLog, DeadlineEvent, Theme } from './types';
 import { StatsHeader } from './components/StatsHeader';
 import { YearGrid } from './components/YearGrid';
 import { DayPulse } from './components/DayPulse';
@@ -86,6 +86,7 @@ const App: React.FC = () => {
     // -- User Settings State --
     const [gender, setGender] = useState<Gender>('MALE');
     const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
+    const [theme, setTheme] = useState<Theme>('EXPRESSIVE');
 
     // -- Persistence & Permissions --
     useEffect(() => {
@@ -96,6 +97,9 @@ const App: React.FC = () => {
 
             const { value: savedGender } = await Preferences.get({ key: 'gender' });
             if (savedGender) setGender(savedGender as Gender);
+
+            const { value: savedTheme } = await Preferences.get({ key: 'theme' });
+            if (savedTheme) setTheme(savedTheme as Theme);
 
             // 2. Request Permissions (Native Only)
             if (Capacitor.isNativePlatform()) {
@@ -288,6 +292,12 @@ const App: React.FC = () => {
         await Preferences.set({ key: 'gender', value: g });
     };
 
+    const handleThemeChange = async (t: Theme) => {
+        setTheme(t);
+        triggerHaptic('tick');
+        await Preferences.set({ key: 'theme', value: t });
+    };
+
     // -- Deadline Handling --
     const handleSetDeadline = (e: React.ChangeEvent<HTMLInputElement>) => {
         const val = e.target.value;
@@ -423,7 +433,7 @@ const App: React.FC = () => {
                     <div className="flex-1 w-full flex items-center justify-center my-12 scale-150">
                         <YearGrid
                             data={data} logs={logs} deadline={deadline} hoveredDay={null} selectedDay={null} isOverview={true}
-                            onHoverDay={() => { }} onSelectDay={() => { }} onToggleOverview={() => { }}
+                            onHoverDay={() => { }} onSelectDay={() => { }} onToggleOverview={() => { }} theme={theme}
                         />
                     </div>
                 </div>
@@ -438,6 +448,7 @@ const App: React.FC = () => {
                     onSave={!selectedDay.isFuture ? handleSaveLog : undefined}
                     onDelete={!selectedDay.isFuture ? handleDeleteLog : undefined}
                     onSetDeadline={selectedDay.isFuture ? handleConfirmDeadline : undefined}
+                    theme={theme}
                 />
             )}
 
@@ -521,6 +532,27 @@ const App: React.FC = () => {
                                 ))}
                             </div>
                         </div>
+
+                        {/* 3. Theme Settings */}
+                        <div>
+                            <span className="block text-[10px] font-mono text-white/50 uppercase tracking-widest mb-4">Interface Mode</span>
+                            <div className="flex gap-2">
+                                {['STANDARD', 'EXPRESSIVE'].map((t) => (
+                                    <button
+                                        key={t}
+                                        onClick={() => handleThemeChange(t as Theme)}
+                                        className={`
+                                flex-1 py-4 rounded-xl text-[10px] font-mono tracking-widest uppercase transition-all duration-300 border
+                                ${theme === t
+                                                ? 'bg-white text-black border-white font-bold shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+                                                : 'bg-[#111] text-white/30 border-white/10 hover:border-white/20 hover:text-white'}
+                            `}
+                                    >
+                                        {t}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
                     </div>
 
 
@@ -590,6 +622,7 @@ const App: React.FC = () => {
                 data={data}
                 isOpen={isMenuOpen}
                 onMenuClick={() => setIsMenuOpen(!isMenuOpen)}
+                theme={theme}
             />
 
             {/* -- VIEW CONTEXT TITLE -- */}
@@ -622,7 +655,7 @@ const App: React.FC = () => {
                     style={getSlideStyle(ViewMode.MICRO)}
                 >
                     <div className="w-full h-full overflow-hidden flex items-center justify-center pt-32 pb-48">
-                        <DayPulse />
+                        <DayPulse theme={theme} />
                     </div>
                 </div>
 
@@ -653,6 +686,7 @@ const App: React.FC = () => {
                                 onHoverDay={setHoveredDay}
                                 onSelectDay={handleSelectDay}
                                 onToggleOverview={() => setIsYearOverview(!isYearOverview)}
+                                theme={theme}
                             />
                         </div>
                     </motion.div>
@@ -664,7 +698,7 @@ const App: React.FC = () => {
                     style={getSlideStyle(ViewMode.MACRO)}
                 >
                     <div className="w-full h-full overflow-y-auto overflow-x-hidden no-scrollbar pt-32 pb-48 scroll-smooth">
-                        <LifeGrid gender={gender} birthDate={birthDate} />
+                        <LifeGrid gender={gender} birthDate={birthDate} theme={theme} />
                     </div>
                 </div>
 
@@ -714,7 +748,7 @@ const App: React.FC = () => {
 
                     {/* Navigation */}
                     <div className="mt-4 pointer-events-auto mb-2 z-50">
-                        <ViewToggle currentView={currentView} onViewChange={setCurrentView} />
+                        <ViewToggle currentView={currentView} onViewChange={setCurrentView} theme={theme} />
                     </div>
                 </footer>
             </div>
