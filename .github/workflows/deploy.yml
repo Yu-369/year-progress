@@ -20,6 +20,9 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       # 1. Setup Environment
       - name: Checkout
@@ -43,6 +46,9 @@ jobs:
 
       - name: Build Web App
         run: npm run build
+        env:
+          # IMPORTANT: Add GEMINI_API_KEY to your GitHub Repo -> Settings -> Secrets and variables -> Actions
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
 
       # 3. Generate & Build Android APK
       - name: Initialize Android Project
@@ -54,14 +60,20 @@ jobs:
           chmod +x gradlew
           ./gradlew assembleDebug
 
-      # 4. Upload APK Artifact (This is the file you want!)
+      # 4. Upload APK Artifact (Binary for download)
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: year-progress-apk
           path: android/app/build/outputs/apk/debug/app-debug.apk
 
-      # 6. Create GitHub Release (The "Publish" part)
+      # 5. Upload Web Artifact (For GitHub Pages)
+      - name: Upload Pages Artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+      # 6. Create GitHub Release
       - name: Create Release
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/')
@@ -72,3 +84,8 @@ jobs:
           prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 7. Deploy to GitHub Pages
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
