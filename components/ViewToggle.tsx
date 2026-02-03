@@ -1,12 +1,14 @@
+
 import React, { useRef, useEffect, useState } from 'react';
-import { ViewMode } from '../types';
+import { ViewMode, Theme } from '../types';
 
 interface ViewToggleProps {
   currentView: ViewMode;
   onViewChange: (view: ViewMode) => void;
+  theme: Theme;
 }
 
-export const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChange }) => {
+export const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChange, theme }) => {
   const [indicatorStyle, setIndicatorStyle] = useState({ left: 0, width: 0 });
   const containerRef = useRef<HTMLDivElement>(null);
 
@@ -44,10 +46,12 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChang
     >
       {/* Sliding Active Indicator */}
       <div 
-        className="absolute top-1 bottom-1 bg-acid rounded-full transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] shadow-[0_0_15px_rgba(204,255,0,0.3)] z-0"
+        className="absolute top-1 bottom-1 rounded-full transition-all duration-300 ease-[cubic-bezier(0.23,1,0.32,1)] z-0"
         style={{ 
           left: indicatorStyle.left, 
-          width: indicatorStyle.width 
+          width: indicatorStyle.width,
+          backgroundColor: 'var(--col-accent)',
+          boxShadow: theme === 'EXPRESSIVE' ? '0 0 15px rgba(208, 188, 255, 0.3)' : '0 0 15px rgba(204, 255, 0, 0.3)'
         }}
       />
 
@@ -66,6 +70,7 @@ export const ViewToggle: React.FC<ViewToggleProps> = ({ currentView, onViewChang
               relative z-10 px-5 py-2.5 rounded-full text-[9px] font-mono tracking-[0.2em] uppercase transition-colors duration-300
               ${isActive ? 'text-void font-bold' : 'text-white/40 hover:text-white'}
             `}
+            style={isActive ? { color: 'var(--bg-void)' } : {}}
           >
             {tab.label}
           </button>

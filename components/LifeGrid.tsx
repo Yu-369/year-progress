@@ -1,17 +1,18 @@
 
 import React, { useMemo, useRef } from 'react';
-import { Gender } from '../types';
+import { Gender, Theme } from '../types';
 
 interface LifeGridProps {
   gender: Gender;
   birthDate: Date;
+  theme: Theme;
 }
 
 const WEEKS_PER_YEAR = 52;
 const MAX_AGE_MALE = 71;
 const MAX_AGE_FEMALE = 76;
 
-export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
+export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate, theme }) => {
   const containerRef = useRef<HTMLDivElement>(null);
 
   const maxYears = gender === 'MALE' ? MAX_AGE_MALE : MAX_AGE_FEMALE;
@@ -29,6 +30,9 @@ export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
     return Array.from({ length: totalWeeks });
   }, [totalWeeks]);
 
+  const accentColor = theme === 'EXPRESSIVE' ? '#D0BCFF' : '#CCFF00';
+  const shadowColor = theme === 'EXPRESSIVE' ? 'rgba(208, 188, 255, 0.9)' : 'rgba(204, 255, 0, 0.9)';
+
   return (
     <div className="w-full flex flex-col items-center pt-8 pb-32 relative animate-reveal">
       {/* Legend */}
@@ -38,8 +42,8 @@ export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
               <span className="text-[10px] font-mono uppercase text-white/40 tracking-widest">Past</span>
           </div>
           <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-acid shadow-[0_0_5px_#CCFF00]"></div>
-              <span className="text-[10px] font-mono uppercase text-acid tracking-widest">Present</span>
+              <div className="w-2 h-2 rounded-full shadow-[0_0_5px_currentColor]" style={{ backgroundColor: accentColor, color: accentColor }}></div>
+              <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: accentColor }}>Present</span>
           </div>
           <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full border border-white/10"></div>
@@ -68,8 +72,8 @@ export const LifeGrid: React.FC<LifeGridProps> = ({ gender, birthDate }) => {
                             ${isCurrent ? 'z-10 scale-150 relative' : ''}
                         `}
                         style={{
-                            backgroundColor: isCurrent ? '#CCFF00' : isPast ? '#333333' : 'rgba(255,255,255,0.08)',
-                            boxShadow: isCurrent ? '0 0 10px rgba(204,255,0,0.9)' : 'none',
+                            backgroundColor: isCurrent ? accentColor : isPast ? '#333333' : 'rgba(255,255,255,0.08)',
+                            boxShadow: isCurrent ? `0 0 10px ${shadowColor}` : 'none',
                             borderRadius: isCurrent ? '50%' : '1px'
                         }}
                     />

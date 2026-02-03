@@ -1,14 +1,15 @@
 
 import React from 'react';
-import { YearData } from '../types';
+import { YearData, Theme } from '../types';
 
 interface StatsHeaderProps {
   data: YearData;
   isOpen: boolean;
   onMenuClick: () => void;
+  theme: Theme;
 }
 
-export const StatsHeader: React.FC<StatsHeaderProps> = ({ data, isOpen, onMenuClick }) => {
+export const StatsHeader: React.FC<StatsHeaderProps> = ({ data, isOpen, onMenuClick, theme }) => {
   const triggerHaptic = () => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate(10);
@@ -56,7 +57,7 @@ export const StatsHeader: React.FC<StatsHeaderProps> = ({ data, isOpen, onMenuCl
             ${isOpen ? 'opacity-0 translate-x-10' : 'opacity-100 translate-x-0'}
         `}
       >
-        <div className="h-1.5 w-1.5 bg-acid rounded-none animate-pulse"></div>
+        <div style={{ backgroundColor: 'var(--col-accent)' }} className="h-1.5 w-1.5 rounded-none animate-pulse"></div>
         <h1 className="text-xs font-mono font-bold tracking-[0.3em] text-white">
           {data.year}
         </h1>

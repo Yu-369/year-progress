@@ -1,3 +1,4 @@
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -60,9 +61,28 @@
   font-display: swap;
 }
 
+:root {
+  --bg-void: #050505;
+  --bg-panel: #0A0A0A;
+  --col-accent: #CCFF00;
+  --col-text: #F9FAFB;
+  --col-subtle: #333333;
+}
+
+/* Material 3 Expressive Delta */
+.theme-expressive {
+  --bg-void: #0F0518; /* Deep Cosmic Violet */
+  --bg-panel: #1D1626; /* Surface Container High */
+  --col-accent: #D0BCFF; /* M3 Primary Purple 80 */
+  --col-text: #E6E1E5;
+  --col-subtle: #49454F;
+}
+
 @layer base {
   body {
-    @apply bg-void text-gray-50 antialiased overflow-hidden;
+    background-color: var(--bg-void);
+    color: var(--col-text);
+    @apply antialiased overflow-hidden transition-colors duration-700 ease-in-out;
     touch-action: none;
   }
 }
@@ -89,6 +109,10 @@
   pointer-events: none;
   z-index: 50;
   animation: scan 8s linear infinite;
+}
+
+.theme-expressive .scanline {
+  background: linear-gradient(to bottom, transparent, rgba(208, 188, 255, 0.05), transparent);
 }
 
 ::-webkit-scrollbar {

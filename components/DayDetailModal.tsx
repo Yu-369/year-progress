@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { DayData, DayLog } from '../types';
+import { DayData, DayLog, Theme } from '../types';
 import { formatDate } from '../utils/dateHelper';
 
 interface DayDetailModalProps {
@@ -10,12 +10,14 @@ interface DayDetailModalProps {
     onSave?: (log: DayLog) => void;
     onDelete?: () => void;
     onSetDeadline?: () => void;
+    theme: Theme;
 }
 
-export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog, onClose, onSave, onDelete, onSetDeadline }) => {
+export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog, onClose, onSave, onDelete, onSetDeadline, theme }) => {
     const [note, setNote] = useState(existingLog?.note || '');
     const [impact, setImpact] = useState<DayLog['impact']>(existingLog?.impact || 'NEUTRAL');
     const [animateIn, setAnimateIn] = useState(false);
+    const isExpressive = theme === 'EXPRESSIVE';
 
     useEffect(() => {
         // Slight delay to allow DOM paint before triggering CSS transition
@@ -59,12 +61,17 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog
     const isHigh = impact === 'HIGH';
     const isMute = impact === 'LOW';
 
+    // M3E Colors vs Standard
+    const accentColor = isExpressive ? '#D0BCFF' : '#CCFF00'; // Purple 80 vs Acid
+    const highShadow = isExpressive ? 'rgba(208, 188, 255, 0.3)' : 'rgba(204, 255, 0, 0.3)';
+    const highGlow = isExpressive ? '#D0BCFF' : '#CCFF00';
+
     return (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center pointer-events-none perspective-[2000px]">
             {/* Backdrop */}
             <div
                 className={`absolute inset-0 transition-all duration-700 ease-premium pointer-events-auto backdrop-blur-xl
-            ${isHigh ? 'bg-acid/10' : 'bg-black/60'}
+            ${isHigh ? (isExpressive ? 'bg-[#D0BCFF]/10' : 'bg-acid/10') : 'bg-black/60'}
             ${animateIn ? 'opacity-100' : 'opacity-0'}
         `}
                 onClick={(e) => {
@@ -78,30 +85,47 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog
                 onClick={(e) => e.stopPropagation()}
                 className={`relative w-full sm:max-w-lg bg-[#080808] overflow-hidden pointer-events-auto flex flex-col
             border-t sm:border transition-all duration-700 ease-[cubic-bezier(0.19,1,0.22,1)]
-            sm:rounded-[3rem] rounded-t-[3rem] shadow-2xl
-            ${isHigh ? 'border-acid shadow-[0_0_100px_rgba(204,255,0,0.3)]' : 'border-white/10 shadow-black'}
+            ${isExpressive ? 'sm:rounded-tl-[48px] sm:rounded-tr-[16px] sm:rounded-bl-[16px] sm:rounded-br-[48px] rounded-t-[48px]' : 'sm:rounded-[3rem] rounded-t-[3rem]'}
+            shadow-2xl
+            ${isHigh ? `border-[${accentColor}]` : 'border-white/10 shadow-black'}
             ${animateIn ? 'translate-y-0 rotate-x-0 scale-100' : 'translate-y-[110%] rotate-x-10 scale-95'}
         `}
-                style={{ maxHeight: '90dvh' }}
+                style={{ 
+                    maxHeight: '90dvh',
+                    borderColor: isHigh ? accentColor : 'rgba(255,255,255,0.1)',
+                    boxShadow: isHigh ? `0 0 100px ${highShadow}` : '0 25px 50px -12px rgba(0,0,0,0.5)',
+                    backgroundColor: isExpressive ? '#1D1626' : '#080808'
+                }}
             >
                 {/* Visual FX Layers */}
                 <div className="absolute inset-0 opacity-[0.03] pointer-events-none noise-overlay" />
                 {isHigh && <div className="scanline opacity-20 animate-scan" />}
 
                 {/* Intensity Header */}
-                <div className={`w-full h-1 transition-all duration-700 ${isHigh ? 'bg-acid shadow-[0_0_20px_#CCFF00]' : 'bg-white/5'}`} />
+                <div 
+                    className={`w-full h-1 transition-all duration-700`}
+                    style={{ 
+                        backgroundColor: isHigh ? accentColor : 'rgba(255,255,255,0.05)',
+                        boxShadow: isHigh ? `0 0 20px ${highGlow}` : 'none'
+                    }} 
+                />
 
                 <div className="p-8 sm:p-10 flex flex-col relative z-10 h-full overflow-y-auto no-scrollbar">
                     <div className="flex justify-between items-start mb-8">
                         <div className="flex flex-col gap-1">
-                            <p className={`text-[9px] font-mono tracking-[0.4em] uppercase transition-colors duration-500 ${isHigh ? 'text-acid' : 'text-white/30'}`}>
+                            <p 
+                                className="text-[9px] font-mono tracking-[0.4em] uppercase transition-colors duration-500"
+                                style={{ color: isHigh ? accentColor : 'rgba(255,255,255,0.3)' }}
+                            >
                                 {day.isFuture ? 'Timeline Forward' : (isHigh ? 'High Impact' : isMute ? 'Low Impact' : 'Standard Log')}
                             </p>
                             <div className="flex items-center gap-4">
-                                <h2 className={`text-5xl font-display font-bold tracking-tighter leading-none transition-all duration-700
-                            ${isHigh ? 'text-acid drop-shadow-[0_0_15px_rgba(204,255,0,0.4)] animate-glitch-text' : 'text-white'}
-                            ${isMute ? 'text-white/40' : ''}
-                        `}>
+                                <h2 className={`text-5xl font-display font-bold tracking-tighter leading-none transition-all duration-700 ${isMute ? 'text-white/40' : 'text-white'}`}
+                                    style={{ 
+                                        color: isHigh ? accentColor : undefined,
+                                        textShadow: isHigh ? `0 0 15px ${highShadow}` : undefined
+                                    }}
+                                >
                                     {formatDate(day.date)}
                                 </h2>
                                 {/* Minimal Add Deadline Button (Future Only) */}
@@ -169,15 +193,21 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog
                                         onClick={() => handleImpactSelect('HIGH')}
                                         className={`relative rounded-2xl border transition-all duration-300 ease-bounce-sm flex flex-col items-center justify-center gap-2 overflow-hidden
                                     ${isHigh
-                                                ? 'border-acid bg-acid text-black scale-110 shadow-[0_0_40px_rgba(204,255,0,0.5)] z-10'
-                                                : 'border-acid/20 text-acid bg-acid/5 opacity-50 hover:opacity-100 hover:bg-acid/10'}
+                                                ? 'scale-110 z-10'
+                                                : 'opacity-50 hover:opacity-100'}
                                 `}
+                                        style={{
+                                            borderColor: isHigh ? accentColor : `${accentColor}33`,
+                                            backgroundColor: isHigh ? accentColor : `${accentColor}0D`,
+                                            color: isHigh ? '#000' : accentColor,
+                                            boxShadow: isHigh ? `0 0 40px ${highShadow}` : 'none'
+                                        }}
                                     >
                                         {isHigh && <div className="absolute inset-0 bg-white/20 animate-pulse" />}
                                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor" className={isHigh ? 'animate-bounce' : ''}>
                                             <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
                                         </svg>
-                                        <span className={`text-[9px] font-mono tracking-[0.2em] font-bold uppercase ${isHigh ? 'text-black' : 'text-acid'}`}>Surge</span>
+                                        <span className={`text-[9px] font-mono tracking-[0.2em] font-bold uppercase`}>Surge</span>
                                     </button>
                                 </div>
                             </div>
@@ -190,12 +220,18 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog
                                     onChange={(e) => setNote(e.target.value)}
                                     placeholder="Reflect on today..."
                                     className={`w-full h-32 rounded-2xl p-4 text-base font-sans leading-relaxed resize-none focus:outline-none transition-all duration-500 border
-                                ${isHigh
-                                            ? 'bg-acid/5 border-acid/30 text-acid placeholder-acid/20 focus:bg-acid/10'
-                                            : isMute
-                                                ? 'bg-[#111] border-white/5 text-white/60 placeholder-white/10 focus:bg-[#161616] focus:border-white/10'
-                                                : 'bg-white/5 border-transparent text-white placeholder-white/20 focus:bg-white/10 focus:border-white/10'}
+                                ${isMute ? 'bg-[#111] border-white/5 text-white/60 placeholder-white/10 focus:bg-[#161616] focus:border-white/10' : ''}
                             `}
+                                    style={isHigh ? {
+                                        backgroundColor: `${accentColor}0D`,
+                                        borderColor: `${accentColor}4D`,
+                                        color: accentColor,
+                                        // placeholderColor handled via class if possible or inline opacity
+                                    } : !isMute ? {
+                                        backgroundColor: 'rgba(255,255,255,0.05)',
+                                        borderColor: 'transparent',
+                                        color: 'white'
+                                    } : {}}
                                     spellCheck={false}
                                 />
                             </div>
@@ -211,10 +247,13 @@ export const DayDetailModal: React.FC<DayDetailModalProps> = ({ day, existingLog
                                     type="button"
                                     onClick={handleSave}
                                     className={`flex-1 py-4 rounded-2xl font-bold uppercase tracking-[0.4em] text-xs transition-all duration-500 ease-bounce-sm active:scale-95
-                                ${isHigh
-                                            ? 'bg-acid text-black shadow-[0_0_30px_#CCFF00]'
-                                            : 'bg-white text-black hover:bg-gray-200 shadow-[0_0_20px_rgba(255,255,255,0.2)]'}
+                                ${!isHigh ? 'bg-white text-black hover:bg-gray-200 shadow-[0_0_20px_rgba(255,255,255,0.2)]' : ''}
                             `}
+                                    style={isHigh ? {
+                                        backgroundColor: accentColor,
+                                        color: 'black',
+                                        boxShadow: `0 0 30px ${highGlow}`
+                                    } : {}}
                                 >
                                     Save Signal
                                 </button>

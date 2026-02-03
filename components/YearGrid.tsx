@@ -1,7 +1,7 @@
 
 import React, { useRef, useCallback } from 'react';
 import { motion } from 'framer-motion';
-import { DayData, YearData, DayLog, DeadlineEvent } from '../types';
+import { DayData, YearData, DayLog, DeadlineEvent, Theme } from '../types';
 import { getDateId } from '../utils/storage';
 
 interface YearGridProps {
@@ -14,6 +14,7 @@ interface YearGridProps {
   onHoverDay: (day: DayData | null) => void;
   onSelectDay: (day: DayData) => void;
   onToggleOverview: () => void;
+  theme: Theme;
 }
 
 export const YearGrid: React.FC<YearGridProps> = ({
@@ -25,11 +26,13 @@ export const YearGrid: React.FC<YearGridProps> = ({
   isOverview,
   onHoverDay,
   onSelectDay,
-  onToggleOverview
+  onToggleOverview,
+  theme
 }) => {
   const lastVibratedIndex = useRef<number>(-1);
   const pinchStartDist = useRef<number | null>(null);
   const allDays = data.days;
+  const isExpressive = theme === 'EXPRESSIVE';
 
   const triggerHaptic = useCallback((pattern: 'tick' | 'heavy' = 'tick') => {
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
@@ -85,15 +88,15 @@ export const YearGrid: React.FC<YearGridProps> = ({
     const dateId = getDateId(day.date);
     const isDeadline = deadline?.date === dateId;
 
-    // Today
-    if (day.isToday) return { bg: 'bg-acid', border: 'border-transparent', shadow: 'shadow-[0_0_10px_#CCFF00]' };
+    // Today - M3E uses Accent Color
+    if (day.isToday) return { bg: isExpressive ? 'bg-[#D0BCFF]' : 'bg-acid', border: 'border-transparent', shadow: isExpressive ? 'shadow-[0_0_15px_#D0BCFF]' : 'shadow-[0_0_10px_#CCFF00]' };
 
     // Deadline (Priority over past logs for visibility, but typically future)
     if (isDeadline) return { bg: 'bg-red-500', border: 'border-transparent', shadow: 'deadline-pulse' };
 
     // Past with Log
     if (day.isPast && log) {
-      if (log.impact === 'HIGH') return { bg: 'bg-acid', border: 'border-acid', shadow: 'shadow-[0_0_8px_#CCFF00]' };
+      if (log.impact === 'HIGH') return { bg: isExpressive ? 'bg-[#D0BCFF]' : 'bg-acid', border: isExpressive ? 'border-[#D0BCFF]' : 'border-acid', shadow: isExpressive ? 'shadow-[0_0_8px_#D0BCFF]' : 'shadow-[0_0_8px_#CCFF00]' };
       if (log.impact === 'NEUTRAL') return { bg: 'bg-white', border: 'border-white', shadow: 'shadow-[0_0_5px_rgba(255,255,255,0.4)]' };
       return { bg: 'bg-[#222]', border: 'border-white/20', shadow: 'none' };
     }
@@ -105,13 +108,17 @@ export const YearGrid: React.FC<YearGridProps> = ({
     return { bg: 'bg-transparent', border: 'border-white/5', shadow: 'none' };
   };
 
-  // Improved Spring Physics for organic feel
-  const springTransition = {
-    type: "spring",
-    stiffness: 120,
-    damping: 20,
-    mass: 0.8
-  };
+  // M3E Motion Physics: Spring vs Standard: Tween
+  const springTransition = isExpressive 
+    ? { type: "spring" as const, stiffness: 150, damping: 12, mass: 1.2 } 
+    : { type: "spring" as const, stiffness: 120, damping: 20, mass: 0.8 };
+
+  // M3E Shape Logic: Asymmetrical cookies vs Standard Circles
+  const getShapeClass = (day: DayData) => {
+      if (!isExpressive) return 'rounded-full';
+      // M3E "Cookie" shape for small items
+      return 'rounded-[4px]'; 
+  }
 
   return (
     <div
@@ -137,7 +144,9 @@ export const YearGrid: React.FC<YearGridProps> = ({
               fixed top-40 left-1/2 -translate-x-1/2 z-[90]
               flex items-center gap-2 px-4 py-2 rounded-full border border-white/10
               backdrop-blur-md transition-all duration-300 active:scale-95 shadow-xl
-              ${isOverview ? 'bg-acid/10 text-acid border-acid/30' : 'bg-black/60 text-white/50 hover:bg-white/10 hover:text-white'}
+              ${isOverview 
+                ? (isExpressive ? 'bg-[#D0BCFF]/10 text-[#D0BCFF] border-[#D0BCFF]/30' : 'bg-acid/10 text-acid border-acid/30') 
+                : 'bg-black/60 text-white/50 hover:bg-white/10 hover:text-white'}
           `}
         initial={false}
       >
@@ -161,6 +170,7 @@ export const YearGrid: React.FC<YearGridProps> = ({
           const isHovered = hoveredDay?.dayOfYear === day.dayOfYear;
           const isSelected = selectedDay?.dayOfYear === day.dayOfYear;
           const style = getDayColor(day, isSelected || isHovered);
+          const shapeClass = getShapeClass(day);
 
           // Uniform dot sizing logic for both views as requested
           const dotSize = (day.isToday || isSelected || style.shadow === 'deadline-pulse') ? 'w-3 h-3' : 'w-2 h-2';
@@ -176,7 +186,8 @@ export const YearGrid: React.FC<YearGridProps> = ({
                 triggerHaptic('heavy');
                 onSelectDay(day);
               }}
-              className={`relative flex items-center justify-center cursor-pointer group rounded-full transition-opacity
+              className={`relative flex items-center justify-center cursor-pointer group transition-opacity
+                    ${sShapeClass(shapeClass)}
                     ${isOverview ? 'w-full aspect-square' : 'w-8 h-8'} 
                     ${day.isFuture ? 'opacity-30 cursor-not-allowed' : 'opacity-100'}
                   `}
@@ -184,9 +195,10 @@ export const YearGrid: React.FC<YearGridProps> = ({
             >
               <motion.div
                 className={`
-                        rounded-full transition-colors duration-300
+                        transition-colors duration-300
                         ${style.bg} ${style.border} ${style.shadow} border
                         ${dotSize}
+                        ${shapeClass}
                     `}
                 transition={springTransition}
               />
@@ -194,11 +206,11 @@ export const YearGrid: React.FC<YearGridProps> = ({
               {!isOverview && (isSelected || isHovered) && (
                 <motion.div
                   layoutId="focusRing"
-                  className="absolute inset-0 border border-white/40 rounded-full"
+                  className={`absolute inset-0 border border-white/40 ${shapeClass}`}
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1.4, opacity: 1 }}
                   exit={{ scale: 0.8, opacity: 0 }}
-                  transition={{ type: "spring", stiffness: 300, damping: 20 }}
+                  transition={springTransition}
                 />
               )}
             </motion.div>
@@ -208,3 +220,9 @@ export const YearGrid: React.FC<YearGridProps> = ({
     </div>
   );
 };
+
+// Helper to safely apply rounded classes if they conflict
+function sShapeClass(cls: string) {
+    if (cls.includes('rounded-')) return '';
+    return 'rounded-full';
+}

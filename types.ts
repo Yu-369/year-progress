@@ -1,3 +1,4 @@
+
 export interface DayData {
   date: Date;
   dayOfYear: number;
@@ -34,10 +35,12 @@ export enum ViewMode {
 }
 
 export type Gender = 'MALE' | 'FEMALE';
+export type Theme = 'STANDARD' | 'EXPRESSIVE';
 
 export interface UserSettings {
   gender: Gender;
   birthDate: Date;
+  theme: Theme;
 }
 
 export interface LifeWeek {

@@ -1,5 +1,7 @@
-import React, { useEffect, useState, useMemo, useCallback, useRef, memo } from 'react';
+
+import React, { useEffect, useState, useMemo, useRef, memo } from 'react';
 import { getSunTimes } from '../utils/dateHelper';
+import { Theme } from '../types';
 
 // Memoized static tick marks to prevent re-renders
 const TickMarks = memo(() => (
@@ -48,7 +50,7 @@ const SunsetIcon = memo(() => (
 ));
 SunsetIcon.displayName = 'SunsetIcon';
 
-export const DayPulse: React.FC = () => {
+export const DayPulse: React.FC<{ theme: Theme }> = ({ theme }) => {
   const [now, setNow] = useState(new Date());
   const [sunTimes, setSunTimes] = useState({ sunrise: '--:--', sunset: '--:--' });
   const [hasLocation, setHasLocation] = useState(false);
@@ -113,13 +115,15 @@ export const DayPulse: React.FC = () => {
     };
   }, [now]);
 
+  const accentColor = theme === 'EXPRESSIVE' ? '208, 188, 255' : '204, 255, 0'; // RGB vals
+
   // Memoized sweep style to prevent object recreation
   const sweepStyle = useMemo(() => ({
     willChange: 'background' as const,
-    background: `conic-gradient(from 0deg, rgba(204, 255, 0, 0.15) 0deg, rgba(204, 255, 0, 0.0) ${degrees}deg, transparent ${degrees}deg)`,
+    background: `conic-gradient(from 0deg, rgba(${accentColor}, 0.15) 0deg, rgba(${accentColor}, 0.0) ${degrees}deg, transparent ${degrees}deg)`,
     maskImage: 'radial-gradient(circle, transparent 30%, black 100%)',
     WebkitMaskImage: 'radial-gradient(circle, transparent 30%, black 100%)'
-  }), [degrees]);
+  }), [degrees, accentColor]);
 
   const needleStyle = useMemo(() => ({
     transform: `translateX(-50%) rotate(${degrees}deg)`,
@@ -148,9 +152,9 @@ export const DayPulse: React.FC = () => {
           className="absolute top-0 left-1/2 w-0.5 h-[50%] origin-bottom z-10"
           style={needleStyle}
         >
-          <div className="w-full h-full bg-gradient-to-t from-transparent via-acid to-acid shadow-[0_0_15px_rgba(204,255,0,0.8)]" />
+          <div className="w-full h-full bg-gradient-to-t from-transparent via-current to-current" style={{ color: `rgb(${accentColor})`, boxShadow: `0 0 15px rgba(${accentColor}, 0.8)` }} />
           {/* Tip Glow */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 bg-acid rounded-full shadow-[0_0_10px_rgba(204,255,0,1)]" />
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-2 h-2 rounded-full" style={{ backgroundColor: `rgb(${accentColor})`, boxShadow: `0 0 10px rgba(${accentColor}, 1)` }} />
         </div>
 
         {/* Center Digital Readout */}
@@ -161,7 +165,7 @@ export const DayPulse: React.FC = () => {
             <span className="w-[1.1em] text-center">{minutes}</span>
           </div>
           <div className="flex items-center gap-2 mt-2 w-[180px] justify-center">
-            <span className="text-xl font-mono text-acid w-[1.5em] text-center">{seconds}</span>
+            <span className="text-xl font-mono w-[1.5em] text-center" style={{ color: `rgb(${accentColor})` }}>{seconds}</span>
             <span className="text-xs font-mono text-white/50 w-[1.5em] text-left">.{millis}</span>
           </div>
         </div>
