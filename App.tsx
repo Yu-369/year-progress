@@ -86,7 +86,7 @@ const App: React.FC = () => {
     // -- User Settings State --
     const [gender, setGender] = useState<Gender>('MALE');
     const [birthDate, setBirthDate] = useState<Date>(new Date(2000, 0, 1));
-    const [theme, setTheme] = useState<Theme>('EXPRESSIVE');
+    const [theme, setTheme] = useState<Theme>('STANDARD');
 
     // -- Persistence & Permissions --
     useEffect(() => {
@@ -151,6 +151,11 @@ const App: React.FC = () => {
                 if (json.gender) {
                     setGender(json.gender);
                     await Preferences.set({ key: 'gender', value: json.gender });
+                }
+
+                if (json.theme) {
+                    setTheme(json.theme);
+                    await Preferences.set({ key: 'theme', value: json.theme });
                 }
 
                 triggerHaptic('heavy');
@@ -238,7 +243,7 @@ const App: React.FC = () => {
             if (element) {
                 try {
                     const canvas = await html2canvas(element, {
-                        backgroundColor: '#050505',
+                        backgroundColor: theme === 'EXPRESSIVE' ? '#0F0518' : '#050505',
                         scale: 2, // Retina quality
                         logging: false,
                         useCORS: true
@@ -298,38 +303,7 @@ const App: React.FC = () => {
         await Preferences.set({ key: 'theme', value: t });
     };
 
-    // -- Deadline Handling --
-    const handleSetDeadline = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const val = e.target.value;
-        if (!val) return;
-
-        // Check if future
-        const [y, m, d] = val.split('-').map(Number);
-        const date = new Date(y, m - 1, d);
-
-        if (date <= new Date()) {
-            alert("Memento Mori. Set a deadline in the future.");
-            return;
-        }
-
-        const newDeadline: DeadlineEvent = {
-            date: val, // Keep YYYY-MM-DD
-            title: "Project Finish", // Default or could expand to modal input later
-            createdAt: Date.now()
-        };
-
-        setDeadline(newDeadline);
-        saveDeadline(newDeadline);
-        triggerHaptic('heavy');
-    };
-
-    const handleClearDeadline = () => {
-        setDeadline(null);
-        deleteDeadline();
-        triggerHaptic('tick');
-    };
-
-    // -- SWIPE LOGIC --
+    // -- Swipe Handling --
     const onTouchStart = (e: React.TouchEvent) => {
         if (e.touches.length > 1) {
             touchStartX.current = null;
@@ -419,14 +393,14 @@ const App: React.FC = () => {
 
     return (
         <div
-            className="h-[100dvh] w-full bg-void flex flex-col overflow-hidden relative font-sans"
+            className={`h-[100dvh] w-full bg-void flex flex-col overflow-hidden relative font-sans ${theme === 'EXPRESSIVE' ? 'theme-expressive' : ''}`}
             onClick={handleVoidClick}
         >
             <div className="noise-overlay" />
 
             {/* -- HIDDEN EXPORT TARGET -- */}
             {isExporting && (
-                <div id="visual-export-target" className="fixed top-0 left-0 w-[1080px] h-[1920px] bg-[#050505] z-[9999] p-20 flex flex-col items-center justify-between pointer-events-none">
+                <div id="visual-export-target" className="fixed top-0 left-0 w-[1080px] h-[1920px] bg-void z-[9999] p-20 flex flex-col items-center justify-between pointer-events-none">
                     <div className="w-full flex justify-between items-start border-b border-white/20 pb-10">
                         <h1 className="text-8xl font-display font-bold text-white tracking-tighter">YEAR<br /><span className="text-acid">{data.year}</span></h1>
                     </div>
@@ -465,6 +439,7 @@ const App: React.FC = () => {
             ${isMenuOpen ? 'translate-x-0' : '-translate-x-full'}
         `}
                 onClick={(e: React.MouseEvent) => e.stopPropagation()}
+                style={{ backgroundColor: 'var(--bg-panel)' }}
             >
                 <div className="flex-1 overflow-y-auto p-8 pt-24 flex flex-col no-scrollbar">
                     {/* Header */}
@@ -544,7 +519,7 @@ const App: React.FC = () => {
                                         className={`
                                 flex-1 py-4 rounded-xl text-[10px] font-mono tracking-widest uppercase transition-all duration-300 border
                                 ${theme === t
-                                                ? 'bg-white text-black border-white font-bold shadow-[0_0_20px_rgba(255,255,255,0.2)]'
+                                                ? 'bg-acid text-black border-acid font-bold shadow-[0_0_20px_rgba(204,255,0,0.2)]'
                                                 : 'bg-[#111] text-white/30 border-white/10 hover:border-white/20 hover:text-white'}
                             `}
                                     >
@@ -580,7 +555,8 @@ const App: React.FC = () => {
                                         logs,
                                         deadline,
                                         birthDate: birthDate.toISOString(),
-                                        gender
+                                        gender,
+                                        theme
                                     };
                                     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
                                     const anchor = document.createElement('a');
@@ -706,7 +682,9 @@ const App: React.FC = () => {
 
             {/* -- FOOTER -- */}
             <div className="absolute bottom-0 left-0 right-0 z-50 pointer-events-none">
-                <div className="absolute inset-0 h-56 -top-28 bg-gradient-to-t from-void via-void/95 to-transparent pointer-events-none translate-y-28"></div>
+                <div className="absolute inset-0 h-56 -top-28 pointer-events-none translate-y-28"
+                     style={{ background: 'linear-gradient(to top, var(--bg-void) 0%, transparent 100%)' }}
+                ></div>
 
                 <footer className="relative h-56 w-full flex flex-col items-center justify-between pb-10 pt-4 text-center">
                     {/* Dynamic HUD */}
