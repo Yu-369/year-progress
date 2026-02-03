@@ -1,3 +1,4 @@
+
 /** @type {import('tailwindcss').Config} */
 export default {
     content: [
@@ -15,9 +16,9 @@ export default {
                 mono: ['"JetBrains Mono"', 'monospace'],
             },
             colors: {
-                void: '#050505',
-                acid: '#CCFF00',
-                subtle: '#333333',
+                void: 'var(--bg-void)',
+                acid: 'var(--col-accent)',
+                subtle: 'var(--col-subtle)',
                 glass: 'rgba(255, 255, 255, 0.03)',
             },
             transitionTimingFunction: {
